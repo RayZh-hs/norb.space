@@ -8,7 +8,7 @@ import config from '@/site-config' // Using the real config now
 
 // --- Blog Post Fetching ---
 const MAX_POSTS = 3
-let allPostsByDate = []
+let allPostsByDate;
 try {
   const allPosts = await getBlogCollection()
   allPostsByDate = sortMDByDate(allPosts).slice(0, MAX_POSTS)
@@ -181,7 +181,7 @@ const blogPageLink = '/blog'
 
     {/* 4. Blog Preview Section */}
     {
-      allPostsByDate.length > 0 && (
+      allPostsByDate && allPostsByDate.length > 0 && (
         <section
           id='blog-section'
           class='parallax-section min-h-[70vh] bg-slate-50 py-20 dark:bg-slate-800 md:py-32'
@@ -289,7 +289,7 @@ const blogPageLink = '/blog'
     })
 
     // --- Content Section Animations ---
-    gsap.utils.toArray('.parallax-section').forEach((section) => {
+    gsap.utils.toArray<Element>('.parallax-section').forEach((section) => {
       const title = section.querySelector('.section-title')
       const content = section.querySelectorAll(
         '.section-content, .hobby-item, .blog-post-item, .astro-pure-button'
@@ -327,7 +327,7 @@ const blogPageLink = '/blog'
     })
 
     // --- Optional: Content Title Parallax (Subtle scroll effect) ---
-    gsap.utils.toArray('.parallax-section .section-title').forEach((title) => {
+    gsap.utils.toArray<Element>('.parallax-section .section-title').forEach((title) => {
       gsap.to(title, {
         yPercent: -20, // Move title up slightly faster than scroll
         ease: 'none',
