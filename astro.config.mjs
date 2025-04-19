@@ -26,6 +26,8 @@ import {
 } from './src/plugins/shiki-transformers.ts'
 import config from './src/site.config.ts'
 
+import icon from 'astro-icon';
+
 // https://astro.build/config
 export default defineConfig({
   // Top-Level Options
@@ -51,23 +53,19 @@ export default defineConfig({
     }
   },
 
-  integrations: [
-    // astro-pure will automatically add sitemap, mdx & tailwind
-    // sitemap(),
-    // mdx(),
-    UnoCSS({ injectReset: true }),
-    AstroPureIntegration(config),
-    // (await import('@playform/compress')).default({
-    //   SVG: false,
-    //   Exclude: ['index.*.js']
-    // }),
+  integrations: [// astro-pure will automatically add sitemap, mdx & tailwind
+  // sitemap(),
+  // mdx(),
+  UnoCSS({ injectReset: true }), AstroPureIntegration(config), // (await import('@playform/compress')).default({
+  //   SVG: false,
+  //   Exclude: ['index.*.js']
+  // }),
 
-    // Temporary fix vercel adapter
-    // static build method is not needed
-    outputCopier({
-      integ: ['sitemap', 'pagefind']
-    })
-  ],
+  // Temporary fix vercel adapter
+  // static build method is not needed
+  outputCopier({
+    integ: ['sitemap', 'pagefind']
+  }), icon()],
   // root: './my-project-directory',
 
   // Prefetch Options

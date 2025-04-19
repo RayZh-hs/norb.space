@@ -1,0 +1,136 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import { cn } from '../../../utils'; // Assuming this utility exists
+import { Icon } from 'astro-icon/components'; // Assuming path
+
+// Define the component's props
+// Using a generic type that accepts common attributes plus our custom ones.
+// We let astro:props handle the tag-specific attribute validation.
+interface Props extends HTMLAttributes<'a' | 'button' | 'span' | 'div'> {
+  as?: 'a' | 'button' | 'span' | 'div';
+  class?: string;
+  title?: string; // Keep separate from native title attribute if needed
+  href?: string;
+  buttonStyle?: 'button' | 'pill'; // Renamed from 'style'
+  prependIcon?: string;
+  appendIcon?: string;
+  gap?: string; // e.g., '0.5rem', '8px'
+  // Allow any other props
+  [key: string]: any;
+}
+
+// Destructure props with defaults
+const {
+  as: Tag = 'a',
+  class: className,
+  title,
+  href,
+  buttonStyle = 'button', // Use the renamed prop
+  prependIcon,
+  appendIcon,
+  gap = '0.4rem',
+  style, // Capture the standard style prop separately if passed
+  ...rest // Collect remaining props for astro:props
+} = Astro.props as Props;
+
+const hasPrependIcon = !!prependIcon;
+const hasAppendIcon = !!appendIcon;
+const hasTitle = !!title;
+
+// Combine gap style with any passed-in style string/object
+// Convert the gap style object to a string for broader compatibility
+const gapStyleString = gap ? `gap: ${gap};` : '';
+let combinedStyle = gapStyleString;
+
+// If a style prop was explicitly passed, merge it carefully
+if (style) {
+  if (typeof style === 'string') {
+    combinedStyle += style; // Append if it's a string
+  } else if (typeof style === 'object') {
+    // Convert passed style object to string (basic example)
+    combinedStyle += Object.entries(style)
+      .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`)
+      .join(' ');
+  }
+}
+
+// Filter out props that are handled explicitly or internal to prevent duplicates
+// 'class' is handled by cn, 'style' is combined above, 'as' determines the tag
+// title/prependIcon/appendIcon/gap/buttonStyle are component logic props
+delete rest.as;
+delete rest.class; // Although cn handles it, astro:props might complain if it's still present
+delete rest.title;
+delete rest.buttonStyle;
+delete rest.prependIcon;
+delete rest.appendIcon;
+delete rest.gap;
+delete rest.style; // Ensure the original style prop isn't spread again
+
+---
+
+<Tag
+  class={cn(
+    'group inline-flex items-center align-middle',
+    'underlined-button-mixin',
+    !href && Tag === 'a' ? 'cursor-default' : 'cursor-pointer', // Ensure pointer for buttons etc.
+    buttonStyle === 'pill' && 'rounded-xl',
+    className
+  )}
+  style={combinedStyle || undefined} {/* Apply combined style string */}
+  href={href}
+  {...(Tag === 'a' && href && { 'data-astro-prefetch': true })} {/* Prefetch only for actual links */}
+  astro:props={rest} {/* Use astro:props to spread the remaining attributes safely */}
+>
+  <slot>
+    {hasPrependIcon && (
+      <Icon
+        name={prependIcon}
+        class={cn('w-4 h-4 flex-shrink-0', 'prepend-icon-mixin')}
+        aria-hidden="true"
+      />
+    )}
+    {hasTitle && (
+      <span class="my-0 flex-shrink-0">{title}</span>
+    )}
+    {hasAppendIcon && (
+      <Icon
+        name={appendIcon}
+        class={cn('w-4 h-4 flex-shrink-0', 'append-icon-mixin')}
+        aria-hidden="true"
+      />
+    )}
+  </slot>
+</Tag>
+
+<style>
+  /* Styles remain the same */
+  .underlined-button-mixin {
+    position: relative;
+    padding-bottom: 2px;
+    /* cursor: pointer; <- Moved cursor logic to cn */
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .underlined-button-mixin::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 1px;
+    background-color: hsl(var(--primary) / var(--un-text-opacity, 1));
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    transform-origin: left;
+    transform: scaleX(0);
+    transition: transform 0.2s linear;
+  }
+
+  .underlined-button-mixin:hover::before,
+  .underlined-button-mixin:focus::before {
+    transform: scaleX(1);
+  }
+
+  .prepend-icon-mixin { /* Optional */ }
+  .append-icon-mixin { /* Optional */ }
+</style>

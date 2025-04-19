@@ -3,8 +3,9 @@
 import { PostPreview } from 'astro-pure/components/pages'
 import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
 import { Button } from 'astro-pure/user'
+import { UButton } from '^/components/user/custom'
 import PageLayout from '@/layouts/BaseLayout.astro' // Assumes header is part of this layout
-import config from '@/site-config' // Using the real config now
+import config from '@/site-config'
 
 // --- Blog Post Fetching ---
 const MAX_POSTS = 3
@@ -18,7 +19,6 @@ try {
 
 // --- Placeholder data - replace ---
 const universityName = 'the University of Astro'
-const cgPortfolioLink = '#'
 const aboutPageLink = '/about'
 const projectsPageLink = '/projects'
 const blogPageLink = '/blog'
@@ -76,20 +76,22 @@ const blogPageLink = '/blog'
 
   {/* Parallax Content Sections Container */}
   {/* `relative z-0` ensures this content scrolls UNDER the sticky header (z-30) */}
-  <div class='content-container relative z-0 overflow-x-hidden bg-white dark:bg-slate-900'>
+  <div class='content-container relative z-0 overflow-x-hidden bg-white dark:bg-gray-900 dark:bg-opacity-20'>
     {/* 1. About Me Section */}
-    <section id='about-section' class='parallax-section min-h-[60vh] py-20 md:py-32'>
+    <section id='about-section' class='parallax-section min-h-[60vh] md:py-32'>
       <div class='container mx-auto max-w-4xl px-6 text-center'>
-        <h2 class='section-title mb-6 text-3xl font-semibold md:text-4xl'>About Me</h2>
+        <h2 class='section-title mb-6 text-3xl font-semibold md:text-4xl '>About Me</h2>
         <p class='section-content mb-8 text-lg text-slate-700 dark:text-slate-300 md:text-xl'>
           A student at {universityName}, an enthusiastic full-stack developer exploring the web, and
           always eager to learn and create.
         </p>
-        <Button
+        <UButton
           href={aboutPageLink}
           title='Learn More'
           size='lg'
-          className='section-content astro-pure-button'
+          class='underlined-button astro-pure-button'
+          style="animation-delay: 1s !important;"
+          appendIcon="carbon:arrow-right"
         />
       </div>
     </section>
@@ -97,7 +99,7 @@ const blogPageLink = '/blog'
     {/* 2. Projects Section */}
     <section
       id='projects-section'
-      class='parallax-section min-h-[80vh] bg-slate-50 py-20 dark:bg-slate-800 md:py-32'
+      class='parallax-section min-h-[80vh] bg-slate-50 py-20 dark:bg-gray-800 dark:bg-opacity-20 md:py-32'
     >
       <div class='container mx-auto max-w-6xl px-6'>
         <h2 class='section-title mb-12 text-center text-3xl font-semibold md:text-4xl'>Projects</h2>
@@ -128,11 +130,13 @@ const blogPageLink = '/blog'
           </div>
         </div>
         <div class='mt-12 text-center'>
-          <Button
+          <UButton
             href={projectsPageLink}
-            title='View All Projects'
+            title='View all projects'
             size='lg'
-            className='section-content astro-pure-button'
+            class='underlined-button astro-pure-button'
+            style="animation-delay: 1s !important;"
+            appendIcon="carbon:arrow-right"
           />
         </div>
       </div>
@@ -150,14 +154,7 @@ const blogPageLink = '/blog'
             <div>
               <h3 class='mb-1 text-xl font-medium'>Amateur CG Artist</h3>
               <p class='text-slate-700 dark:text-slate-300'>
-                Exploring 3D. <a
-                  href={cgPortfolioLink}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  class='ml-2 font-medium text-blue-600 hover:underline dark:text-blue-400'
-                >
-                  View Portfolio →
-                </a>
+                Exploring 3D.
               </p>
             </div>
           </li>
@@ -184,7 +181,7 @@ const blogPageLink = '/blog'
       allPostsByDate && allPostsByDate.length > 0 && (
         <section
           id='blog-section'
-          class='parallax-section min-h-[70vh] bg-slate-50 py-20 dark:bg-slate-800 md:py-32'
+          class='parallax-section min-h-[70vh] bg-slate-50 py-20 dark:bg-gray-900 dark:bg-opacity-20 md:py-32'
         >
           <div class='container mx-auto max-w-4xl px-6'>
             <h2 class='section-title mb-12 text-center text-3xl font-semibold md:text-4xl'>
@@ -199,11 +196,12 @@ const blogPageLink = '/blog'
               ))}
             </div>
             <div class='mt-12 text-center'>
-              <Button
+              <UButton
                 href={blogPageLink}
                 title='Visit Blog'
                 size='lg'
-                className='section-content astro-pure-button'
+                class='underlined-button astro-pure-button'
+                appendIcon='carbon:arrow-right'
               />
             </div>
           </div>
