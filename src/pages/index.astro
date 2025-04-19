@@ -1,10 +1,10 @@
 ---
 // src/pages/index.astro
+import { UButton } from '^/components/user/custom' // Assuming UButton is your custom styled button
+
 import { PostPreview } from 'astro-pure/components/pages'
 import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
-import { Button } from 'astro-pure/user'
-import { UButton } from '^/components/user/custom'
-import PageLayout from '@/layouts/BaseLayout.astro' // Assumes header is part of this layout
+import PageLayout from '@/layouts/BaseLayout.astro'
 import config from '@/site-config'
 
 // --- Blog Post Fetching ---
@@ -15,52 +15,100 @@ try {
   allPostsByDate = sortMDByDate(allPosts).slice(0, MAX_POSTS)
 } catch (error) {
   console.error('Error fetching blog posts:', error)
+  // Optionally handle the error, e.g., show a message or hide the section
 }
 
-// --- Placeholder data - replace ---
-const universityName = 'the University of Astro'
+// --- Content ---
+// Keep links concise or use variables if they become complex
 const aboutPageLink = '/about'
 const projectsPageLink = '/projects'
 const blogPageLink = '/blog'
+
+// Updated Hobby descriptions based on your input
+const hobbies = [
+  {
+    icon: '🎨',
+    title: 'Amateur CG Artist',
+    description: 'Exploring 3D modeling and rendering. Always learning new techniques.',
+    link: '/portfolio', // Optional: Link to a portfolio page
+    linkText: 'View Portfolio'
+  },
+  {
+    icon: '🎮',
+    title: 'Indie Game Developer',
+    description: 'Building interactive experiences. Currently working on "Neutronic".',
+    link: '/projects#neutronic', // Optional: Link to project detail
+    linkText: 'See Neutronic'
+  },
+  {
+    icon: '🧱',
+    title: 'Minecraft Modder & Redstoner',
+    description: 'Crafting complex Redstone contraptions and developing auxiliary mods.',
+    link: 'https://github.com/your-repo', // Optional: Link to relevant repo/page
+    linkText: 'Explore Mods'
+  }
+]
+
+// Placeholder Project Data (Replace with actual project details)
+const projects = [
+  {
+    title: 'Neutronic',
+    description: 'An upcoming interactive game experience.',
+    imageUrl: '/images/neutronic-placeholder.png' // Replace with actual image path
+  },
+  {
+    title: 'Project Two',
+    description: 'A brief description of the second project.',
+    imageUrl: '/images/project2-placeholder.png' // Replace with actual image path
+  },
+  {
+    title: 'Project Three',
+    description: 'A brief description of the third project.',
+    imageUrl: '/images/project3-placeholder.png' // Replace with actual image path
+  }
+]
 ---
 
-{/* BaseLayout likely includes the <header-component> via its slot */}
 <PageLayout meta={{ title: 'Home' }} highlightColor='#5e81ac'>
-  {/* Hero Section - Takes full viewport height initially */}
-  {/* Use flex to center content vertically & horizontally */}
-  {
-    /* `relative` is needed for potential absolute positioned elements inside like scroll indicator */
-  }
-  {/* `overflow-hidden` prevents text showing outside bounds during parallax */}
+  {/* Hero Section */}
   <section
-    class='hero-section relative flex flex-grow min-h-screen flex-col items-center justify-center overflow-hidden text-center'
+    class='hero-section relative flex min-h-screen flex-col justify-center overflow-hidden text-left'
   >
-    {/* Text container for GSAP targeting */}
-    <div class='text-container z-10' style='translate: 0 -12.5vh;'>
-      {/* z-10 ensures text is above potential background elements */}
-      {/* align these texts at the left side*/}
-      <div class='flex flex-grow flex-col items-start'>
+    {/* Container to control width and padding */}
+    <div class='container mx-auto max-w-5xl px-6'>
+      {/* Text container for GSAP targeting & positioning */}
+      {/* Adjusted translate for better vertical centering feel */}
+      <div class='text-container z-10' style='transform: translateY(-10vh);'>
         <h1
-          class='fade-in-up text-5xl font-light text-slate-900 opacity-0 dark:text-white md:text-5xl lg:text-5xl'
-          style='animation-delay: 0.5s; font-weight: 200;'
+          class='fade-in-up text-4xl font-extralight text-slate-700 opacity-0 dark:text-slate-300 md:text-5xl'
+          style='animation-delay: 0.4s;'
         >
-          Call me
+          Hello, I'm
         </h1>
-        <h1
-          class='fade-in-up mt-2 text-7xl font-medium text-slate-900 opacity-0 dark:text-white md:text-8xl lg:text-9xl'
-          style='animation-delay: 1.5s; font-weight: 200; font-family: "Ubuntu";'
+        <h2
+          class='fade-in-up mt-1 text-6xl font-medium text-slate-900 opacity-0 dark:text-white md:text-7xl lg:text-8xl'
+          style='animation-delay: 1.0s; font-family: "Ubuntu", sans-serif; letter-spacing: -0.02em;'
         >
-          {config.author}
-        </h1>
+          {config.author}.
+        </h2>
+        {/* Optional: Short tagline */}
+        <p
+          class='fade-in-up mt-4 max-w-xl text-lg text-slate-600 opacity-0 dark:text-slate-400 md:text-xl'
+          style='animation-delay: 1.6s;'
+        >
+          A student developer exploring the web, crafting digital experiences, and occasionally
+          building computers in Minecraft.
+        </p>
       </div>
     </div>
-    {/* Optional: Scroll down indicator */}
+
+    {/* Scroll down indicator */}
     <div
-      class='absolute bottom-10 z-10 animate-bounce opacity-0 fade-in-up'
+      class='absolute bottom-8 left-1/2 z-10 -translate-x-1/2 transform opacity-0 fade-in-up animate-bounce'
       style='animation-delay: 2.5s;'
     >
       <svg
-        class='mx-auto h-8 w-8 text-slate-500 dark:text-slate-400'
+        class='h-7 w-7 text-slate-500 dark:text-slate-400'
         fill='none'
         stroke='currentColor'
         viewBox='0 0 24 24'
@@ -68,30 +116,29 @@ const blogPageLink = '/blog'
         ><path
           stroke-linecap='round'
           stroke-linejoin='round'
-          stroke-width='2'
+          stroke-width='1.5'
           d='M19 14l-7 7m0 0l-7-7m7 7V3'></path></svg
       >
     </div>
   </section>
 
-  {/* Parallax Content Sections Container */}
-  {/* `relative z-0` ensures this content scrolls UNDER the sticky header (z-30) */}
-  <div class='content-container relative z-0 overflow-x-hidden bg-white dark:bg-gray-900 dark:bg-opacity-20'>
+  {/* Content Sections Container */}
+  <div class='content-container relative z-0 overflow-x-hidden bg-white dark:bg-gray-950'>
     {/* 1. About Me Section */}
-    <section id='about-section' class='parallax-section min-h-[60vh] md:py-32'>
-      <div class='container mx-auto max-w-4xl px-6 text-center'>
-        <h2 class='section-title mb-6 text-3xl font-semibold md:text-4xl '>About Me</h2>
-        <p class='section-content mb-8 text-lg text-slate-700 dark:text-slate-300 md:text-xl'>
-          A student at {universityName}, an enthusiastic full-stack developer exploring the web, and
-          always eager to learn and create.
+    <section id='about-section' class='parallax-section py-24 md:py-32'>
+      <div class='container mx-auto max-w-3xl px-6 text-center'>
+        <h2 class='section-title mb-6 text-3xl font-semibold md:text-4xl'>About Me</h2>
+        <p class='section-content mb-10 text-lg text-slate-700 dark:text-slate-300 md:text-xl'>
+          I'm a passionate full-stack developer and student, constantly diving into new
+          technologies. I thrive on learning, creating elegant solutions, and bringing ideas to life
+          on the web.
         </p>
         <UButton
           href={aboutPageLink}
-          title='Learn More'
+          title='Learn More About Me'
           size='lg'
           class='underlined-button astro-pure-button'
-          style="animation-delay: 1s !important;"
-          appendIcon="carbon:arrow-right"
+          appendIcon='carbon:arrow-right'
         />
       </div>
     </section>
@@ -99,79 +146,94 @@ const blogPageLink = '/blog'
     {/* 2. Projects Section */}
     <section
       id='projects-section'
-      class='parallax-section min-h-[80vh] bg-slate-50 py-20 dark:bg-gray-800 dark:bg-opacity-20 md:py-32'
+      class='parallax-section bg-slate-50 py-24 dark:bg-gray-900 dark:bg-opacity-40 md:py-32'
     >
       <div class='container mx-auto max-w-6xl px-6'>
-        <h2 class='section-title mb-12 text-center text-3xl font-semibold md:text-4xl'>Projects</h2>
+        <h2 class='section-title mb-16 text-center text-3xl font-semibold md:text-4xl'>
+          Featured Projects
+        </h2>
         <div class='grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3'>
-          {/* Placeholder Project Cards */}
-          <div
-            class='project-card rounded-lg border border-slate-200 bg-white p-6 shadow-md dark:border-slate-700 dark:bg-slate-900'
-          >
-            <div class='mb-4 h-40 rounded bg-slate-200 dark:bg-slate-700'></div>
-            <h3 class='mb-2 text-xl font-medium'>Project One</h3>
-            <p class='text-sm text-slate-600 dark:text-slate-400'>Brief description...</p>
-          </div>
-          <div
-            class='project-card rounded-lg border border-slate-200 bg-white p-6 shadow-md dark:border-slate-700 dark:bg-slate-900'
-            style='--card-delay: 0.1s;'
-          >
-            <div class='mb-4 h-40 rounded bg-slate-200 dark:bg-slate-700'></div>
-            <h3 class='mb-2 text-xl font-medium'>Project Two</h3>
-            <p class='text-sm text-slate-600 dark:text-slate-400'>Brief description...</p>
-          </div>
-          <div
-            class='project-card rounded-lg border border-slate-200 bg-white p-6 shadow-md dark:border-slate-700 dark:bg-slate-900'
-            style='--card-delay: 0.2s;'
-          >
-            <div class='mb-4 h-40 rounded bg-slate-200 dark:bg-slate-700'></div>
-            <h3 class='mb-2 text-xl font-medium'>Project Three</h3>
-            <p class='text-sm text-slate-600 dark:text-slate-400'>Brief description...</p>
-          </div>
+          {
+            projects.map((project, index) => (
+              <div
+                class='project-card group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:hover:border-slate-600 dark:hover:bg-slate-800'
+                style={`--card-delay: ${index * 0.1}s;`}
+              >
+                {/* Image Placeholder with subtle gradient */}
+                <div class='relative mb-4 h-48 w-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800'>
+                  {project.imageUrl ? (
+                    <img
+                      src={project.imageUrl}
+                      alt={project.title}
+                      class='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                      loading='lazy'
+                    />
+                  ) : (
+                    <div class='flex h-full items-center justify-center'>
+                      <svg
+                        class='h-12 w-12 text-slate-400 dark:text-slate-500'
+                        fill='none'
+                        viewBox='0 0 24 24'
+                        stroke='currentColor'
+                      >
+                        <path
+                          stroke-linecap='round'
+                          stroke-linejoin='round'
+                          stroke-width='1'
+                          d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <div class='p-6 pt-0'>
+                  <h3 class='mb-2 text-xl font-medium'>{project.title}</h3>
+                  <p class='text-sm text-slate-600 dark:text-slate-400'>{project.description}</p>
+                </div>
+              </div>
+            ))
+          }
         </div>
-        <div class='mt-12 text-center'>
+        <div class='mt-16 text-center'>
           <UButton
             href={projectsPageLink}
-            title='View all projects'
+            title='View All Projects'
             size='lg'
             class='underlined-button astro-pure-button'
-            style="animation-delay: 1s !important;"
-            appendIcon="carbon:arrow-right"
+            appendIcon='carbon:arrow-right'
           />
         </div>
       </div>
     </section>
 
     {/* 3. Hobbies Section */}
-    <section id='hobbies-section' class='parallax-section min-h-[70vh] py-20 md:py-32'>
+    <section id='hobbies-section' class='parallax-section py-24 md:py-32'>
       <div class='container mx-auto max-w-4xl px-6'>
-        <h2 class='section-title mb-12 text-center text-3xl font-semibold md:text-4xl'>
-          Hobbies & Interests
+        <h2 class='section-title mb-16 text-center text-3xl font-semibold md:text-4xl'>
+          Beyond the Code
         </h2>
-        <ul class='space-y-8'>
-          <li class='hobby-item flex items-start gap-4'>
-            <span class='mt-1 text-2xl'>🎨</span>
-            <div>
-              <h3 class='mb-1 text-xl font-medium'>Amateur CG Artist</h3>
-              <p class='text-slate-700 dark:text-slate-300'>
-                Exploring 3D.
-              </p>
-            </div>
-          </li>
-          <li class='hobby-item flex items-start gap-4'>
-            <span class='mt-1 text-2xl'>🎮</span>
-            <div>
-              <h3 class='mb-1 text-xl font-medium'>Game Developer</h3>
-              <p class='text-slate-700 dark:text-slate-300'>Crafting interactive experiences.</p>
-            </div>
-          </li>
-          <li class='hobby-item flex items-start gap-4'>
-            <span class='mt-1 text-2xl'>🧱</span>
-            <div>
-              <h3 class='mb-1 text-xl font-medium'>Minecraft Modder & Redstoner</h3>
-              <p class='text-slate-700 dark:text-slate-300'>Pushing blocky boundaries.</p>
-            </div>
-          </li>
+        <ul class='space-y-10'>
+          {
+            hobbies.map((hobby) => (
+              <li class='hobby-item flex flex-col items-start gap-4 md:flex-row md:items-center'>
+                <span class='text-4xl md:text-5xl'>{hobby.icon}</span>
+                <div class='flex-grow'>
+                  <h3 class='mb-1 text-xl font-medium'>{hobby.title}</h3>
+                  <p class='text-slate-700 dark:text-slate-300'>{hobby.description}</p>
+                  {hobby.link && hobby.linkText && (
+                    <a
+                      href={hobby.link}
+                      class='mt-2 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400'
+                      target={hobby.link.startsWith('http') ? '_blank' : '_self'}
+                      rel={hobby.link.startsWith('http') ? 'noopener noreferrer' : ''}
+                    >
+                      {hobby.linkText} →
+                    </a>
+                  )}
+                </div>
+              </li>
+            ))
+          }
         </ul>
       </div>
     </section>
@@ -181,24 +243,25 @@ const blogPageLink = '/blog'
       allPostsByDate && allPostsByDate.length > 0 && (
         <section
           id='blog-section'
-          class='parallax-section min-h-[70vh] bg-slate-50 py-20 dark:bg-gray-900 dark:bg-opacity-20 md:py-32'
+          class='parallax-section bg-slate-50 py-24 dark:bg-gray-900 dark:bg-opacity-20 md:py-32'
         >
-          <div class='container mx-auto max-w-4xl px-6'>
+          <div class='container mx-auto max-w-3xl px-6'>
             <h2 class='section-title mb-12 text-center text-3xl font-semibold md:text-4xl'>
-              Latest Posts
+              Latest Thoughts
             </h2>
-            <div class='space-y-8'>
+            {/* Improved spacing and structure for blog previews */}
+            <div class='space-y-10'>
               {allPostsByDate.map((p) => (
-                <div class='blog-post-item'>
-                  {' '}
-                  <PostPreview post={p} />{' '}
+                <div class='blog-post-item group'>
+                  {/* Wrap PostPreview for potential hover effects */}
+                  <PostPreview post={p} />
                 </div>
               ))}
             </div>
-            <div class='mt-12 text-center'>
+            <div class='mt-16 text-center'>
               <UButton
                 href={blogPageLink}
-                title='Visit Blog'
+                title='Explore the Blog'
                 size='lg'
                 class='underlined-button astro-pure-button'
                 appendIcon='carbon:arrow-right'
@@ -214,11 +277,26 @@ const blogPageLink = '/blog'
 
 {/* ----- STYLES ----- */}
 <style is:global>
-  /* Basic styles for hero text fade-in */
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* General transition for dark mode */
+  body,
+  .content-container,
+  .project-card,
+  .parallax-section {
+    transition:
+      background-color 0.3s ease-in-out,
+      border-color 0.3s ease-in-out;
+  }
+
+  /* Hero text fade-in */
   @keyframes fadeInUp {
     from {
       opacity: 0;
-      transform: translateY(30px);
+      transform: translateY(25px); /* Slightly reduced distance */
     }
     to {
       opacity: 1;
@@ -226,10 +304,10 @@ const blogPageLink = '/blog'
     }
   }
   .fade-in-up {
-    animation: fadeInUp 1s ease-out forwards;
+    animation: fadeInUp 0.8s ease-out forwards; /* Slightly faster */
   }
 
-  /* Styles for GSAP - Content sections start hidden/offset */
+  /* Initial state for GSAP animated elements */
   .parallax-section .section-title,
   .parallax-section .section-content,
   .parallax-section .project-card,
@@ -237,20 +315,56 @@ const blogPageLink = '/blog'
   .parallax-section .blog-post-item,
   .parallax-section .astro-pure-button {
     opacity: 0;
-    transform: translateY(40px);
+    transform: translateY(50px); /* Increased distance for more noticeable effect */
+    will-change: transform, opacity; /* Performance hint */
   }
 
-  /* Ensure last section has padding before potential footer */
+  /* Underlined Button Style */
+  .underlined-button {
+    position: relative;
+    display: inline-flex; /* Use inline-flex for icon alignment */
+    align-items: center;
+    gap: 0.5rem; /* Space between text and icon */
+    padding-bottom: 4px; /* Space for the underline */
+    text-decoration: none !important; /* Override default */
+    color: inherit; /* Inherit text color */
+    font-weight: 500; /* Medium weight */
+    transition: color 0.3s ease;
+  }
+
+  .underlined-button::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--theme-accent, #5e81ac); /* Use CSS variable from layout */
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1); /* Smooth elastic transition */
+  }
+
+  .underlined-button:hover::after,
+  .underlined-button:focus::after {
+    transform: scaleX(1);
+  }
+
+  /* Ensure last section has padding */
   .content-container section:last-child {
-    padding-bottom: 6rem;
+    padding-bottom: 8rem; /* Increased padding */
   }
 
+  /* Reduced Motion Preferences */
   @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto; /* Disable smooth scroll */
+    }
     .fade-in-up {
       animation: none;
       opacity: 1;
+      transform: translateY(0);
     }
-    /* GSAP elements should be visible if motion is reduced */
     .parallax-section .section-title,
     .parallax-section .section-content,
     .parallax-section .project-card,
@@ -260,6 +374,17 @@ const blogPageLink = '/blog'
       opacity: 1;
       transform: translateY(0);
     }
+    .underlined-button::after {
+      transition: none; /* Disable underline animation */
+    }
+    .project-card:hover {
+      transform: none; /* Disable hover scale */
+      box-shadow: none; /* Disable hover shadow */
+    }
+    .project-card img:hover {
+      transform: none; /* Disable image scale */
+    }
+    /* GSAP animations will be disabled by the script */
   }
 </style>
 
@@ -271,18 +396,32 @@ const blogPageLink = '/blog'
   gsap.registerPlugin(ScrollTrigger)
 
   document.addEventListener('DOMContentLoaded', () => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (prefersReducedMotion) {
+      console.log('Reduced motion enabled, skipping GSAP animations.')
+      // Ensure elements styled for animation are visible
+      gsap.set(
+        '.parallax-section .section-title, .parallax-section .section-content, .parallax-section .project-card, .parallax-section .hobby-item, .parallax-section .blog-post-item, .parallax-section .astro-pure-button',
+        { opacity: 1, y: 0 }
+      )
+      gsap.set('.hero-section .text-container', { yPercent: 0, opacity: 1 })
+      return // Exit script early
+    }
+
+    console.log('Initializing GSAP animations...')
+
     // --- Hero Text Parallax & Fade ---
     gsap.to('.hero-section .text-container', {
-      yPercent: -50, // Move up 50% of its own height
-      opacity: 0, // Fade out
-      ease: 'none', // Linear progression tied to scroll
+      yPercent: -40, // Slightly less movement
+      opacity: 0,
+      ease: 'none',
       scrollTrigger: {
-        trigger: '.hero-section', // Element that triggers the animation
-        start: 'top top', // Start when hero top hits viewport top
-        end: 'bottom 60%', // End when hero bottom hits 60% from viewport top
-        // Adjust '60%' to control fade duration/speed
-        scrub: 1 // Smooth scrubbing (1 second catch-up time)
-        // markers: true,         // Uncomment for debugging trigger points
+        trigger: '.hero-section',
+        start: 'top top',
+        end: 'bottom 70%', // Adjust end point for fade duration
+        scrub: 1.2 // Slightly smoother scrub
+        // markers: true,
       }
     })
 
@@ -290,64 +429,66 @@ const blogPageLink = '/blog'
     gsap.utils.toArray<Element>('.parallax-section').forEach((section) => {
       const title = section.querySelector('.section-title')
       const content = section.querySelectorAll(
-        '.section-content, .hobby-item, .blog-post-item, .astro-pure-button'
+        '.section-content, .hobby-item, .blog-post-item, .astro-pure-button:not(.project-card .astro-pure-button)' // Exclude buttons inside cards if any
       )
       const cards = section.querySelectorAll('.project-card')
 
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
-          start: 'top 80%',
+          start: 'top 85%', // Start animation a bit later
           end: 'bottom 20%',
           toggleActions: 'play none none reverse'
-          // markers: true, // Uncomment for debugging
+          // markers: true, // Enable for debugging section triggers
         },
         defaults: {
-          // Set default ease and duration for this timeline
-          ease: 'power2.out',
-          duration: 0.8
+          ease: 'power3.out', // Smoother easing
+          duration: 0.9 // Slightly longer duration
         }
       })
 
+      // Animate Title
       if (title) {
-        tl.to(title, { opacity: 1, y: 0 })
+        tl.to(title, { opacity: 1, y: 0 }, 0) // Start immediately
       }
+
+      // Animate Content (staggered)
       if (content.length > 0) {
-        tl.to(content, { opacity: 1, y: 0, stagger: 0.15 }, '-=0.5')
+        tl.to(content, { opacity: 1, y: 0, stagger: 0.18 }, '-=0.6') // Overlap slightly with title
       }
+
+      // Animate Project Cards (staggered)
       if (cards.length > 0) {
         tl.to(
           cards,
-          { opacity: 1, y: 0, duration: 0.7, stagger: { amount: 0.4, from: 'start' } },
-          '-=0.5'
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.7, // Faster card animation
+            stagger: {
+              amount: 0.5, // Total time for all cards
+              from: 'start' // Animate from the first card
+            }
+          },
+          '-=0.7' // Overlap more significantly
         )
       }
     })
 
-    // --- Optional: Content Title Parallax (Subtle scroll effect) ---
+    // --- Subtle Section Title Parallax (Optional but nice) ---
     gsap.utils.toArray<Element>('.parallax-section .section-title').forEach((title) => {
       gsap.to(title, {
-        yPercent: -20, // Move title up slightly faster than scroll
+        yPercent: -15, // Reduced parallax effect
         ease: 'none',
         scrollTrigger: {
           trigger: title.closest('.parallax-section'),
-          start: 'top bottom', // Start when section enters viewport
-          end: 'bottom top', // End when section leaves viewport
-          scrub: 1.5 // Smooth scrubbing
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: 1.8 // Smoother scrub
         }
       })
     })
 
-    // --- Reduced Motion Check ---
-    // GSAP respects prefers-reduced-motion by default for basic tweens,
-    // but ScrollTrigger animations might still run. Add this for safety.
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (prefersReducedMotion) {
-      ScrollTrigger.getAll().forEach((st) => st.kill()) // Disable all ScrollTriggers
-      gsap.set('.hero-section .text-container', { yPercent: 0, opacity: 1 }) // Ensure hero text is visible
-      console.log('Reduced motion enabled, GSAP ScrollTriggers disabled.')
-    } else {
-      console.log('GSAP animations initialized.')
-    }
+    console.log('GSAP animations initialized.')
   })
 </script>
