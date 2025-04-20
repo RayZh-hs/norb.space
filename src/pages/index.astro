@@ -79,30 +79,32 @@ const projects = [
       {/* Text container for GSAP targeting & positioning */}
       {/* Adjusted translate for better vertical centering feel */}
       <div class='text-container z-10' style='transform: translateY(-10vh);'>
+        {/* REMOVED fade-in-up, opacity-0, animation-delay. ADDED id */}
         <h1
-          class='fade-in-up text-4xl font-extralight text-slate-700 opacity-0 dark:text-slate-300 md:text-5xl'
-          style='animation-delay: 0.4s;'
+          id="hero-greeting"
+          class='text-4xl font-extralight text-slate-700 dark:text-slate-300 md:text-5xl'
         >
           Hello, I'm
         </h1>
+        {/* REMOVED fade-in-up, opacity-0, animation-delay. ADDED id */}
         <h2
-          class='fade-in-up mt-1 text-6xl font-medium text-slate-900 opacity-0 dark:text-white md:text-7xl lg:text-8xl'
-          style='animation-delay: 1.0s; font-family: "Ubuntu", sans-serif; letter-spacing: -0.02em;'
+          id="hero-name"
+          class='mt-1 text-6xl font-medium text-slate-900 dark:text-white md:text-7xl lg:text-8xl'
+          style='font-family: "Ubuntu", sans-serif; letter-spacing: -0.02em;'
         >
           {config.author}.
         </h2>
-        {/* Optional: Short tagline */}
+        {/* REMOVED fade-in-up, opacity-0, animation-delay. ADDED id */}
         <p
-          class='fade-in-up mt-4 max-w-xl text-lg text-slate-600 opacity-0 dark:text-slate-400 md:text-xl'
-          style='animation-delay: 1.6s;'
+          id="hero-tagline"
+          class='mt-4 max-w-xl text-lg text-slate-600 dark:text-slate-400 md:text-xl'
         >
-          A student developer exploring the web, crafting digital experiences, and occasionally
-          building computers in Minecraft.
+          A student developer exploring the web, crafting digital experiences,and occasionally building computers in Minecraft.
         </p>
       </div>
     </div>
 
-    {/* Scroll down indicator */}
+    {/* Scroll down indicator - Keep CSS animation */}
     <div
       class='absolute bottom-8 left-1/2 z-10 -translate-x-1/2 transform opacity-0 fade-in-up animate-bounce'
       style='animation-delay: 2.5s;'
@@ -124,7 +126,8 @@ const projects = [
 
   {/* Content Sections Container */}
   <div class='content-container relative z-0 overflow-x-hidden bg-white dark:bg-gray-950'>
-    {/* 1. About Me Section */}
+    {/* ... Rest of your sections remain the same ... */}
+     {/* 1. About Me Section */}
     <section id='about-section' class='parallax-section py-24 md:py-32'>
       <div class='container mx-auto max-w-3xl px-6 text-center'>
         <h2 class='section-title mb-6 text-3xl font-semibold md:text-4xl'>About Me</h2>
@@ -292,22 +295,25 @@ const projects = [
       border-color 0.3s ease-in-out;
   }
 
-  /* Hero text fade-in */
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(25px); /* Slightly reduced distance */
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  .fade-in-up {
-    animation: fadeInUp 0.8s ease-out forwards; /* Slightly faster */
+  /* REMOVED fadeInUp animation */
+
+  /* Styles for character spans (set by JS) */
+  .hero-char {
+    display: inline-block; /* Allows transform */
+    opacity: 0; /* Start hidden */
+    /* transform: translateY(15px) rotateX(-90deg); */ /* Starting point */
+    transform: scale(1.2);
+    filter: blur(0.5px);
+    transform-origin: center; /* Rotate around bottom */
+    will-change: transform, opacity;
   }
 
-  /* Initial state for GSAP animated elements */
+  .hero-char.hero-tagline {
+    filter: blur(0);
+    transform: translateY(15px) rotateX(-90deg);
+  }
+
+  /* Initial state for GSAP animated elements in sections */
   .parallax-section .section-title,
   .parallax-section .section-content,
   .parallax-section .project-card,
@@ -315,20 +321,20 @@ const projects = [
   .parallax-section .blog-post-item,
   .parallax-section .astro-pure-button {
     opacity: 0;
-    transform: translateY(50px); /* Increased distance for more noticeable effect */
-    will-change: transform, opacity; /* Performance hint */
+    transform: translateY(50px);
+    will-change: transform, opacity;
   }
 
   /* Underlined Button Style */
   .underlined-button {
     position: relative;
-    display: inline-flex; /* Use inline-flex for icon alignment */
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem; /* Space between text and icon */
-    padding-bottom: 4px; /* Space for the underline */
-    text-decoration: none !important; /* Override default */
-    color: inherit; /* Inherit text color */
-    font-weight: 500; /* Medium weight */
+    gap: 0.5rem;
+    padding-bottom: 4px;
+    text-decoration: none !important;
+    color: inherit;
+    font-weight: 500;
     transition: color 0.3s ease;
   }
 
@@ -339,10 +345,10 @@ const projects = [
     left: 0;
     width: 100%;
     height: 2px;
-    background-color: var(--theme-accent, #5e81ac); /* Use CSS variable from layout */
+    background-color: var(--theme-accent, #5e81ac);
     transform: scaleX(0);
     transform-origin: left;
-    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1); /* Smooth elastic transition */
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   .underlined-button:hover::after,
@@ -352,19 +358,26 @@ const projects = [
 
   /* Ensure last section has padding */
   .content-container section:last-child {
-    padding-bottom: 8rem; /* Increased padding */
+    padding-bottom: 8rem;
   }
 
   /* Reduced Motion Preferences */
   @media (prefers-reduced-motion: reduce) {
     html {
-      scroll-behavior: auto; /* Disable smooth scroll */
+      scroll-behavior: auto;
     }
-    .fade-in-up {
-      animation: none;
-      opacity: 1;
-      transform: translateY(0);
+    /* REMOVED fade-in-up styles */
+
+    /* Ensure hero text is visible immediately */
+    #hero-greeting, #hero-name, #hero-tagline {
+        opacity: 1 !important;
     }
+    /* Ensure character spans (if somehow created) are visible */
+    .hero-char {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+
     .parallax-section .section-title,
     .parallax-section .section-content,
     .parallax-section .project-card,
@@ -375,14 +388,14 @@ const projects = [
       transform: translateY(0);
     }
     .underlined-button::after {
-      transition: none; /* Disable underline animation */
+      transition: none;
     }
     .project-card:hover {
-      transform: none; /* Disable hover scale */
-      box-shadow: none; /* Disable hover shadow */
+      transform: none;
+      box-shadow: none;
     }
     .project-card img:hover {
-      transform: none; /* Disable image scale */
+      transform: none;
     }
     /* GSAP animations will be disabled by the script */
   }
@@ -394,9 +407,61 @@ const projects = [
   import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
   gsap.registerPlugin(ScrollTrigger)
+  enum splitTextOptions {
+    chars = 'chars',
+    words = 'words',
+    lines = 'lines'
+  }
+
+  function splitString(str: string, options: splitTextOptions) {
+    switch (options) {
+      case splitTextOptions.chars:
+        return str.split('').map((char) => char === ' ' ? '&nbsp;' : char)
+      case splitTextOptions.words:
+        return str.split(' ').map((word) => word + '&nbsp;')
+      case splitTextOptions.lines:
+        return str.split('\n').map((line) => line + '\n')
+      default:
+        return str.split('')
+    }
+  }
+
+  // Helper function to split text into character spans
+  function splitTextIntoSpans(selector: string, options: splitTextOptions = splitTextOptions.chars) {
+    const element = document.querySelector(selector)
+    if (!element) return null // Element not found
+
+    const originalId = element.id;
+
+    const text = element.textContent?.trim() ?? ''
+    element.innerHTML = '' // Clear existing content
+
+    const splitWord = splitString(text, options)
+    console.log('Split text:', splitWord) // Debugging log
+
+    const chars = splitWord.map((char) => {
+      const span = document.createElement('span')
+      // span.className = 'hero-char' // Add class for styling and targeting
+      span.classList.add('hero-char')
+      if (originalId) {
+        span.classList.add(originalId) // Add the original ID as a class
+      }
+      // Handle spaces: use non-breaking space for layout consistency
+      span.innerHTML = char
+      element.appendChild(span)
+      return span
+    })
+    return chars // Return the array of span elements
+  }
+
 
   document.addEventListener('DOMContentLoaded', () => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    // --- Select Hero Elements ---
+    const heroGreeting = document.getElementById('hero-greeting');
+    const heroName = document.getElementById('hero-name');
+    const heroTagline = document.getElementById('hero-tagline');
 
     if (prefersReducedMotion) {
       console.log('Reduced motion enabled, skipping GSAP animations.')
@@ -405,86 +470,120 @@ const projects = [
         '.parallax-section .section-title, .parallax-section .section-content, .parallax-section .project-card, .parallax-section .hobby-item, .parallax-section .blog-post-item, .parallax-section .astro-pure-button',
         { opacity: 1, y: 0 }
       )
-      gsap.set('.hero-section .text-container', { yPercent: 0, opacity: 1 })
+      // Ensure hero text is visible (redundant with CSS but safe)
+      gsap.set([heroGreeting, heroName, heroTagline], { opacity: 1 })
       return // Exit script early
     }
 
     console.log('Initializing GSAP animations...')
 
-    // --- Hero Text Parallax & Fade ---
+    // --- Split Hero Text ---
+    const greetingChars = splitTextIntoSpans('#hero-greeting');
+    const nameChars = splitTextIntoSpans('#hero-name');
+    const taglineChars = splitTextIntoSpans('#hero-tagline', splitTextOptions.words);
+
+    // --- GSAP Hero Character Animation ---
+    if (greetingChars && nameChars && taglineChars) {
+        const heroTl = gsap.timeline({ delay: 0.3 }); // Add a small delay before starting
+
+        heroTl
+            .to(greetingChars, {
+                opacity: 1,
+                y: 0,
+                rotateX: 0,
+                scale: 1,
+                filter: 'blur(0px)',
+                stagger: 0.03, // Time between each character animation
+                duration: 0.6, // Duration for each character
+                ease: 'power2.out',
+            })
+            .to(nameChars, {
+                opacity: 1,
+                y: 0,
+                rotateX: 0,
+                scale: 1,
+                filter: 'blur(0px)',
+                stagger: 0.04, // Slightly slower stagger for the name
+                duration: 2,
+                ease: 'power2.out',
+            }, "-=0.5") // Overlap slightly with previous animation
+            .to(taglineChars, {
+                opacity: 1,
+                y: 0,
+                rotateX: 0,
+                scale: 1,
+                filter: 'blur(0px)',
+                stagger: 0.05, // Faster stagger for the tagline
+                duration: 1,
+                ease: 'power1.out',
+            }, "-=1.5"); // Overlap more
+    } else {
+        // Fallback if splitting fails: just fade in the whole lines
+        gsap.set([heroGreeting, heroName, heroTagline], { opacity: 0, y: 15 }); // Initial state
+        gsap.to([heroGreeting, heroName, heroTagline], {
+            opacity: 1,
+            y: 0,
+            duration: 0.8,
+            stagger: 0.8, // Stagger lines
+            ease: 'power2.out',
+            delay: 0.3
+        });
+    }
+
+
+    // --- Hero Text Parallax Fade Out on Scroll (Keep this) ---
     gsap.to('.hero-section .text-container', {
-      yPercent: -40, // Slightly less movement
+      yPercent: -40,
       opacity: 0,
       ease: 'none',
       scrollTrigger: {
         trigger: '.hero-section',
         start: 'top top',
-        end: 'bottom 70%', // Adjust end point for fade duration
-        scrub: 1.2 // Slightly smoother scrub
+        end: 'bottom 70%',
+        scrub: 1.2
         // markers: true,
       }
     })
 
-    // --- Content Section Animations ---
+    // --- Content Section Animations (Keep this) ---
     gsap.utils.toArray<Element>('.parallax-section').forEach((section) => {
       const title = section.querySelector('.section-title')
       const content = section.querySelectorAll(
-        '.section-content, .hobby-item, .blog-post-item, .astro-pure-button:not(.project-card .astro-pure-button)' // Exclude buttons inside cards if any
+        '.section-content, .hobby-item, .blog-post-item, .astro-pure-button:not(.project-card .astro-pure-button)'
       )
       const cards = section.querySelectorAll('.project-card')
 
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
-          start: 'top 85%', // Start animation a bit later
+          start: 'top 85%',
           end: 'bottom 20%',
           toggleActions: 'play none none reverse'
-          // markers: true, // Enable for debugging section triggers
+          // markers: true,
         },
         defaults: {
-          ease: 'power3.out', // Smoother easing
-          duration: 0.9 // Slightly longer duration
+          ease: 'power3.out',
+          duration: 0.9
         }
       })
 
-      // Animate Title
-      if (title) {
-        tl.to(title, { opacity: 1, y: 0 }, 0) // Start immediately
-      }
-
-      // Animate Content (staggered)
-      if (content.length > 0) {
-        tl.to(content, { opacity: 1, y: 0, stagger: 0.18 }, '-=0.6') // Overlap slightly with title
-      }
-
-      // Animate Project Cards (staggered)
+      if (title) { tl.to(title, { opacity: 1, y: 0 }, 0) }
+      if (content.length > 0) { tl.to(content, { opacity: 1, y: 0, stagger: 0.18 }, '-=0.6') }
       if (cards.length > 0) {
-        tl.to(
-          cards,
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.7, // Faster card animation
-            stagger: {
-              amount: 0.5, // Total time for all cards
-              from: 'start' // Animate from the first card
-            }
-          },
-          '-=0.7' // Overlap more significantly
-        )
+        tl.to(cards, { opacity: 1, y: 0, duration: 0.7, stagger: { amount: 0.5, from: 'start' } }, '-=0.7')
       }
     })
 
-    // --- Subtle Section Title Parallax (Optional but nice) ---
+    // --- Subtle Section Title Parallax (Keep this) ---
     gsap.utils.toArray<Element>('.parallax-section .section-title').forEach((title) => {
       gsap.to(title, {
-        yPercent: -15, // Reduced parallax effect
+        yPercent: -15,
         ease: 'none',
         scrollTrigger: {
           trigger: title.closest('.parallax-section'),
           start: 'top bottom',
           end: 'bottom top',
-          scrub: 1.8 // Smoother scrub
+          scrub: 1.8
         }
       })
     })
