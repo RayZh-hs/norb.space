@@ -55,3 +55,11 @@ export const projects = [
         link: 'https://github.com/RayZh-hs/neutronic'
     }
 ]
+
+export const emailAddress = 'ray_zh@sjtu.edu.cn'
+export const socials = [
+    { name: 'Email', url: 'mailto:' + emailAddress, icon: 'carbon:email' },
+    { name: 'Github', url: 'https://github.com/RayZh-hs', icon: 'carbon:logo-github' },
+    // { name: 'LinkedIn', url: '#', icon: 'carbon:logo-linkedin' },
+    { name: 'WeChat', url: 'https://u.wechat.com/MOTpBKnK_SnffegtAi6mILY', icon: 'carbon:logo-wechat' },
+]
