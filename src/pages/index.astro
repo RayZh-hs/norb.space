@@ -1,11 +1,12 @@
 ---
 // src/pages/index.astro
 import { UButton } from '^/components/user/custom' // Assuming UButton is your custom styled button
+import { PostPreview } from '^/components/user/custom'
 
-import { PostPreview } from 'astro-pure/components/pages'
 import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
 import PageLayout from '@/layouts/BaseLayout.astro'
-import config from '@/site-config'
+// import config from '@/site-config'
+import { author, description, longDescription, projects, hobbies } from '@/pages/contents.config'
 
 // --- Blog Post Fetching ---
 const MAX_POSTS = 3
@@ -23,50 +24,6 @@ try {
 const aboutPageLink = '/about'
 const projectsPageLink = '/projects'
 const blogPageLink = '/blog'
-
-// Updated Hobby descriptions based on your input
-const hobbies = [
-  {
-    icon: '🎨',
-    title: 'Amateur CG Artist',
-    description: 'Exploring 3D modeling and rendering. Always learning new techniques.',
-    link: '/portfolio', // Optional: Link to a portfolio page
-    linkText: 'View Portfolio'
-  },
-  {
-    icon: '🎮',
-    title: 'Indie Game Developer',
-    description: 'Building interactive experiences. Currently working on "Neutronic".',
-    link: '/projects#neutronic', // Optional: Link to project detail
-    linkText: 'See Neutronic'
-  },
-  {
-    icon: '🧱',
-    title: 'Minecraft Modder & Redstoner',
-    description: 'Crafting complex Redstone contraptions and developing auxiliary mods.',
-    link: 'https://github.com/your-repo', // Optional: Link to relevant repo/page
-    linkText: 'Explore Mods'
-  }
-]
-
-// Placeholder Project Data (Replace with actual project details)
-const projects = [
-  {
-    title: 'Neutronic',
-    description: 'An upcoming interactive game experience.',
-    imageUrl: '/images/neutronic-placeholder.png' // Replace with actual image path
-  },
-  {
-    title: 'Project Two',
-    description: 'A brief description of the second project.',
-    imageUrl: '/images/project2-placeholder.png' // Replace with actual image path
-  },
-  {
-    title: 'Project Three',
-    description: 'A brief description of the third project.',
-    imageUrl: '/images/project3-placeholder.png' // Replace with actual image path
-  }
-]
 ---
 
 <PageLayout meta={{ title: 'Home' }} highlightColor='#5e81ac'>
@@ -92,14 +49,15 @@ const projects = [
           class='mt-1 text-6xl font-medium text-slate-900 dark:text-white md:text-7xl lg:text-8xl'
           style='font-family: "Ubuntu", sans-serif; letter-spacing: -0.02em;'
         >
-          {config.author}.
+          {author}.
         </h2>
         {/* REMOVED fade-in-up, opacity-0, animation-delay. ADDED id */}
         <p
           id="hero-tagline"
           class='mt-4 max-w-xl text-lg text-slate-600 dark:text-slate-400 md:text-xl'
         >
-          A student developer exploring the web, crafting digital experiences,and occasionally building computers in Minecraft.
+          <!-- A student developer exploring the web, crafting digital experiences,and occasionally building computers in Minecraft. -->
+          {description}
         </p>
       </div>
     </div>
@@ -132,13 +90,11 @@ const projects = [
       <div class='container mx-auto max-w-3xl px-6 text-center'>
         <h2 class='section-title mb-6 text-3xl font-semibold md:text-4xl'>About Me</h2>
         <p class='section-content mb-10 text-lg text-slate-700 dark:text-slate-300 md:text-xl'>
-          I'm a passionate full-stack developer and student, constantly diving into new
-          technologies. I thrive on learning, creating elegant solutions, and bringing ideas to life
-          on the web.
+          {longDescription}
         </p>
         <UButton
           href={aboutPageLink}
-          title='Learn More About Me'
+          title='Learn More'
           size='lg'
           class='underlined-button astro-pure-button'
           appendIcon='carbon:arrow-right'
@@ -148,30 +104,47 @@ const projects = [
 
     {/* 2. Projects Section */}
     <section
-      id='projects-section'
-      class='parallax-section bg-slate-50 py-24 dark:bg-gray-900 dark:bg-opacity-40 md:py-32'
-    >
-      <div class='container mx-auto max-w-6xl px-6'>
-        <h2 class='section-title mb-16 text-center text-3xl font-semibold md:text-4xl'>
-          Featured Projects
-        </h2>
-        <div class='grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3'>
-          {
-            projects.map((project, index) => (
+    id='projects-section'
+    class='parallax-section bg-slate-50 py-24 dark:bg-gray-900 dark:bg-opacity-40 md:py-32'
+  >
+    <div class='container mx-auto max-w-6xl px-6'>
+      <h2 class='section-title mb-16 text-center text-3xl font-semibold md:text-4xl'>
+        Featured Projects
+      </h2>
+      <div class='grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3'>
+        {
+          projects.map((project, index) => (
+            // Cast project to 'any' or your specific Project type if TypeScript complains
+            // about imageIsLogo potentially not existing
+            <a href={project.link} target="_blank" rel="noopener noreferrer">
               <div
                 class='project-card group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:hover:border-slate-600 dark:hover:bg-slate-800'
                 style={`--card-delay: ${index * 0.1}s;`}
               >
-                {/* Image Placeholder with subtle gradient */}
-                <div class='relative mb-4 h-48 w-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800'>
+                {/* --- MODIFIED IMAGE CONTAINER --- */}
+                <div
+                  class:list={[
+                    'relative mb-4 h-48 w-full', // Base styles
+                    'bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800', // Background
+                    // Conditional styles for logo treatment
+                    project.imageIsLogo && 'flex items-center justify-center p-6 md:p-8', // Add padding and flex centering for logos
+                  ]}
+                >
                   {project.imageUrl ? (
                     <img
                       src={project.imageUrl}
-                      alt={project.title}
-                      class='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                      alt={`${project.title} logo`}
+                      class:list={[
+                        'transition-transform duration-300', // Base transition
+                        // Conditional styles for image rendering
+                        project.imageIsLogo
+                          ? 'object-contain max-h-[85%] max-w-[85%]' // Logo: Contain within padded area, don't scale on hover
+                          : 'h-full w-full object-cover group-hover:scale-105', // Default: Cover container, scale on hover
+                      ]}
                       loading='lazy'
                     />
                   ) : (
+                    // Placeholder remains the same
                     <div class='flex h-full items-center justify-center'>
                       <svg
                         class='h-12 w-12 text-slate-400 dark:text-slate-500'
@@ -189,25 +162,28 @@ const projects = [
                     </div>
                   )}
                 </div>
+                {/* --- END MODIFIED IMAGE CONTAINER --- */}
+
                 <div class='p-6 pt-0'>
                   <h3 class='mb-2 text-xl font-medium'>{project.title}</h3>
                   <p class='text-sm text-slate-600 dark:text-slate-400'>{project.description}</p>
                 </div>
               </div>
-            ))
-          }
-        </div>
-        <div class='mt-16 text-center'>
-          <UButton
-            href={projectsPageLink}
-            title='View All Projects'
-            size='lg'
-            class='underlined-button astro-pure-button'
-            appendIcon='carbon:arrow-right'
-          />
-        </div>
+            </a>
+          ))
+        }
       </div>
-    </section>
+      <div class='mt-16 text-center'>
+        <UButton
+          href={projectsPageLink}
+          title='View All Projects'
+          size='lg'
+          class='underlined-button astro-pure-button'
+          appendIcon='carbon:arrow-right'
+        />
+      </div>
+    </div>
+  </section>
 
     {/* 3. Hobbies Section */}
     <section id='hobbies-section' class='parallax-section py-24 md:py-32'>
@@ -250,7 +226,7 @@ const projects = [
         >
           <div class='container mx-auto max-w-3xl px-6'>
             <h2 class='section-title mb-12 text-center text-3xl font-semibold md:text-4xl'>
-              Latest Thoughts
+              Hear Me Out
             </h2>
             {/* Improved spacing and structure for blog previews */}
             <div class='space-y-10'>
@@ -323,6 +299,9 @@ const projects = [
     opacity: 0;
     transform: translateY(50px);
     will-change: transform, opacity;
+  }
+  .project-card {
+    cursor: pointer;
   }
 
   /* Underlined Button Style */
@@ -531,7 +510,7 @@ const projects = [
     }
 
 
-    // --- Hero Text Parallax Fade Out on Scroll (Keep this) ---
+    // --- Hero Text Parallax Fade Out on Scroll ---
     gsap.to('.hero-section .text-container', {
       yPercent: -40,
       opacity: 0,
@@ -545,7 +524,7 @@ const projects = [
       }
     })
 
-    // --- Content Section Animations (Keep this) ---
+    // --- Content Section Animations ---
     gsap.utils.toArray<Element>('.parallax-section').forEach((section) => {
       const title = section.querySelector('.section-title')
       const content = section.querySelectorAll(
@@ -574,7 +553,7 @@ const projects = [
       }
     })
 
-    // --- Subtle Section Title Parallax (Keep this) ---
+    // --- Subtle Section Title Parallax ---
     gsap.utils.toArray<Element>('.parallax-section .section-title').forEach((title) => {
       gsap.to(title, {
         yPercent: -15,
