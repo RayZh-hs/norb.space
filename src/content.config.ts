@@ -39,6 +39,26 @@ const blog = defineCollection({
     })
 })
 
+const projects = defineCollection({
+  type: 'content', // 'content' for Markdown/MDX files
+  schema: ({ image }) => z.object({
+    projectName: z.string(),
+    description: z.string(),
+    tags: z.array(z.string()).optional(),
+    icon: z.object({
+      src: image(), // Use Astro's image helper for the icon source
+    }).optional(),
+    homepage: z.string().url().optional(), // URL for the project's homepage
+    demopage: z.string().url().optional(),
+    gradient: z.object({
+      from: z.string(),
+      to: z.string(),
+    }),
+    // Add any other fields you might need, e.g., order
+    order: z.number().optional(),
+  }),
+});
+
 // Define docs collection
 const docs = defineCollection({
   loader: glob({ base: './src/content/docs', pattern: '**/*.{md,mdx}' }),
@@ -53,4 +73,4 @@ const docs = defineCollection({
     })
 })
 
-export const collections = { blog, docs }
+export const collections = { blog, docs, projects }

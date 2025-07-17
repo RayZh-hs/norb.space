@@ -50,7 +50,7 @@ export const theme: ThemeUserConfig = {
       { title: 'Blog', link: '/blog' },
       // { title: 'Docs', link: '/docs' },
       { title: 'Projects', link: '/projects' },
-      { title: 'Apps', link: '/apps' },
+      // { title: 'Apps', link: '/apps' },
       { title: 'Gallery', link: '/gallery' },
       // { title: 'Links', link: '/links' },
       { title: 'About', link: '/about' }

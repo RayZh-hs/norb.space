@@ -1,0 +1,131 @@
+---
+// src/components/projects/ProjectCard.astro
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import { Icon } from 'astro-pure/user';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  dialogId?: string;
+  class?: string;
+}
+
+const { project, dialogId, class: className } = Astro.props;
+const { id, data } = project;
+const { projectName, description, tags, icon, gradient, homepage, demopage } = data;
+
+// --- Base Styles ---
+const cardBaseStyles = `
+  group relative flex flex-col rounded-xl border bg-card text-card-foreground
+  shadow-sm transition-all duration-300 ease-in-out
+  hover:shadow-xl hover:-translate-y-1
+`;
+---
+
+<div class:list={[cardBaseStyles, className]}>
+  <!-- Tinted Gradient Hover Effect -->
+  <!-- This is a pseudo-element on the parent, activated on group-hover -->
+    <!-- Tinted Gradient Hover Effect -->
+  <!-- Single gradient that adapts to theme -->
+  <div
+    class="absolute inset-0 z-10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+    style={`background: linear-gradient(to bottom, ${gradient.from}20 0%, ${gradient.to}10 70%);`}
+  >
+  </div>
+  
+  <div
+    class="absolute inset-0 z-10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none dark:block hidden"
+    style={`background: linear-gradient(to bottom, ${gradient.from}25 0%, ${gradient.to}15 70%);`}
+  >
+  </div>
+
+  <!-- Main Card Content (relative z-20 to be above the gradient) -->
+  <div class="relative z-20 flex flex-grow flex-col">
+    <!-- Icon Section -->
+    {icon && (
+      <button
+        type="button"
+        class="block w-full aspect-16/9 overflow-hidden focus:outline-none rounded-t-xl"
+        data-project-id={id}
+        aria-haspopup={dialogId ? "dialog" : undefined}
+        aria-controls={dialogId}
+        aria-label={`View details for ${projectName}`}
+      >
+        <Image
+          src={icon.src}
+          alt={`Icon for ${projectName}`}
+          widths={[200, 400, 600]}
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          loading="lazy"
+          class="w-full h-full object-contain p-6 transition-transform duration-300 group-hover:scale-105 dark:brightness-110"
+        />
+      </button>
+    )}
+
+    <!-- Text & Actions Section -->
+    <div class="flex flex-grow flex-col p-5">
+      <!-- Title -->
+      <button
+        type="button"
+        class="text-left mb-2 focus:outline-none"
+        data-project-id={id}
+        aria-haspopup={dialogId ? "dialog" : undefined}
+        aria-controls={dialogId}
+        aria-label={`View details for ${projectName}`}
+      >
+        <h3 class="text-xl font-semibold tracking-tight duration-300 dark:text-foreground">
+          {projectName}
+        </h3>
+      </button>
+
+      <!-- Description -->
+      <p class="text-sm text-muted-foreground mb-4 flex-grow min-h-[3em] line-clamp-3 duration-300">
+        {description}
+      </p>
+
+      <!-- Footer: Tags and Homepage Link -->
+      <div class="mt-auto flex items-end justify-between gap-4">
+        <!-- Tags Section (self-adjusting) -->
+        {tags && tags.length > 0 && (
+          <div class="flex flex-wrap gap-2">
+            {tags.slice(0, 2).map(tag => ( // Show max 2-3 tags to keep it clean
+              <span class="text-xs bg-muted/70 text-muted-foreground duration-300 px-2.5 py-1 rounded-full dark:bg-muted/80 dark:text-muted-foreground">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <!-- Homepage Link (pushed to the right) -->
+        {
+          demopage && (
+            <a
+              href={demopage}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="ml-auto flex-shrink-0 rounded-full p-2 text-muted-foreground transition-all duration-300 bg-muted/70 hover:bg-primary hover:text-primary-foreground hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring"
+              aria-label={`Run demo for ${projectName}`}
+              title="Run Demo"
+              onclick="event.stopPropagation()"
+            >
+              <Icon name="earth" class="size-5" />
+            </a>
+          )
+        }
+        {homepage && (
+          <a
+            href={homepage}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ml-auto flex-shrink-0 rounded-full p-2 text-muted-foreground transition-all duration-300 bg-muted/70 hover:bg-primary hover:text-primary-foreground hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring"
+            aria-label={`Visit homepage for ${projectName}`}
+            title="Visit Homepage"
+            onclick="event.stopPropagation()"
+          >
+            <Icon name="github" class="size-5" />
+          </a>
+        )}
+      </div>
+    </div>
+  </div>
+</div>

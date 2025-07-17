@@ -34,6 +34,7 @@
     "hast-util-select": "^6.0.4",
     "hastscript": "^9.0.1",
     "katex": "^0.16.21",
+    "node-html-parser": "^7.0.1",
     "rehype": "^13.0.2",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",

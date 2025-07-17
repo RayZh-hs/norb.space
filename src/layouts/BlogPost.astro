@@ -6,7 +6,8 @@ import type { CollectionEntry } from 'astro:content'
 import 'katex/dist/katex.min.css'
 
 import { Comment, MediumZoom } from 'astro-pure/advanced'
-import { ArticleBottom, Copyright, Hero, TOC } from 'astro-pure/components/pages'
+import { ArticleBottom, Hero, TOC } from 'astro-pure/components/pages'
+import { Copyright } from '^/components/pages/custom'
 import PageLayout from '@/layouts/ContentLayout.astro'
 import { integ } from '@/site-config'
 
@@ -50,6 +51,7 @@ const primaryColor = data.heroImage?.color ?? 'hsl(var(--primary) / var(--un-tex
 >
   {!!headings.length && <TOC {headings} slot='sidebar' />}
 
+  {/* Hero includes the picture, info bar (lang, time, etc.), the title and the description */}
   <Hero {data} {remarkPluginFrontmatter} slot='header' />
 
   <slot />

@@ -56,6 +56,9 @@ importers:
       katex:
         specifier: ^0.16.21
         version: 0.16.22
+      node-html-parser:
+        specifier: ^7.0.1
+        version: 7.0.1
       rehype:
         specifier: ^13.0.2
         version: 13.0.2
