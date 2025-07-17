@@ -17,7 +17,7 @@ const { projectName, description, tags, icon, gradient, homepage, demopage } = d
 // --- Base Styles ---
 const cardBaseStyles = `
   group relative flex flex-col rounded-xl border bg-card text-card-foreground
-  shadow-sm transition-all duration-300 ease-in-out
+  shadow-sm transition-all duration-300 ease-in-out bg-opacity-25
   hover:shadow-xl hover:-translate-y-1
 `;
 ---
@@ -89,7 +89,7 @@ const cardBaseStyles = `
         {tags && tags.length > 0 && (
           <div class="flex flex-wrap gap-2">
             {tags.slice(0, 2).map(tag => ( // Show max 2-3 tags to keep it clean
-              <span class="text-xs bg-muted/70 text-muted-foreground duration-300 px-2.5 py-1 rounded-full dark:bg-muted/80 dark:text-muted-foreground">
+              <span class="text-xs bg-muted/70 text-muted-foreground duration-300 px-2.5 py-1 rounded-full dark:bg-muted/80 dark:text-muted-foreground ">
                 {tag}
               </span>
             ))}

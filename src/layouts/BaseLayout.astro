@@ -15,7 +15,7 @@ interface Props {
 
 const {
   meta: { articleDate, description = config.description, ogImage, title },
-  highlightColor
+  highlightColor = '#5e81ac' // Default highlight color for all pages
 } = Astro.props
 ---
 
@@ -26,15 +26,11 @@ const {
   </head>
 
   <body class='flex justify-center bg-background text-foreground'>
-    {
-      highlightColor && (
-        <div
-          id='highlight-gradient'
-          class='pointer-events-none absolute start-0 top-0 z-0 h-screen w-full opacity-25'
-          style={`background-image:linear-gradient(${highlightColor},transparent)`}
-        />
-      )
-    }
+    <div
+      id='highlight-gradient'
+      class='pointer-events-none absolute start-0 top-0 z-0 h-screen w-full opacity-25'
+      style={`background-image:linear-gradient(${highlightColor},transparent)`}
+    />
     <div class='w-full max-w-[70rem] px-4 sm:px-7 lg:px-10'>
       <Header />
       <slot />
