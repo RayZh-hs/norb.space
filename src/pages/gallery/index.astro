@@ -1,0 +1,166 @@
+---
+import PageLayout from '@/layouts/BaseLayout.astro'
+
+const meta = {
+  title: 'Gallery',
+  description: "Norb's collection of photography and personal renders."
+}
+---
+
+<PageLayout {meta}>
+  <div class="space-y-8">
+    <!-- Header Section -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Personal Gallery</h1>
+    </div>
+
+    <!-- 
+      Masonry Gallery Grid 
+      This uses the CSS 'column' property to create a masonry layout.
+      The number of columns changes based on the screen size for responsiveness.
+    -->
+    <div id="gallery" class="gallery-grid"></div>
+  </div>
+</PageLayout>
+
+<!-- Lightbox root -->
+<div id="lightbox" class="lightbox-overlay" aria-hidden="true">
+  <div class="lightbox-window">
+    <div class="lightbox-media">
+      <img id="lightbox-img" class="lightbox-img" alt="" />
+    </div>
+    <aside class="lightbox-side">
+      <h3 id="lightbox-title" class="lb-title"></h3>
+      <p id="lightbox-desc" class="lb-desc"></p>
+      <a id="lightbox-link" class="lb-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none">Read blog post →</a>
+    </aside>
+  </div>
+</div>
+
+<style is:global>
+  .gallery-grid {
+  column-gap: 1.25rem; /* horizontal gap between columns */
+    column-count: 1;
+  }
+
+  /* Two columns for medium screens and up (tablets) */
+  @media (min-width: 768px) {
+    .gallery-grid {
+      column-count: 2;
+    }
+  }
+
+  /* Three columns for large screens and up (desktops) */
+  @media (min-width: 1024px) {
+    .gallery-grid {
+      column-count: 3;
+    }
+  }
+
+  /* Masonry items: avoid breaks and add vertical spacing */
+  .break-inside-avoid {
+    /* vendor prefixes for wider support */
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+    /* vertical spacing between stacked items */
+    margin-bottom: 1.25rem;
+  }
+
+  /* Blur-up styles */
+  .lazy-img {
+    filter: blur(24px);
+  transform: scale(1.03);
+    transition: filter .4s ease, transform .4s ease, opacity .3s ease;
+    opacity: .85;
+  }
+  .lazy-img.is-loaded {
+    filter: blur(0);
+    transform: none;
+    opacity: 1;
+  }
+
+  /* Card hover: expand, darken, show caption */
+  .gallery-card {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: 0.5rem; /* rounded-lg */
+  }
+  .gallery-card img { display: block; width: 100%; height: auto; position: relative; z-index: 1; }
+  .gallery-card .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0);
+    transition: background .25s ease;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .gallery-card .caption {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 0.5rem 0.75rem;
+    color: #fff;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    transform: translateY(100%);
+    opacity: 0;
+    transition: transform .25s ease, opacity .25s ease;
+    background: linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0));
+    z-index: 3;
+  }
+  .gallery-card:hover .lazy-img { transform: scale(1.05); }
+  .gallery-card:hover .overlay { background: rgba(0,0,0,.25); }
+  .gallery-card:hover .caption { transform: translateY(0); opacity: 1; }
+
+  /* Lightbox overlay (click-to-zoom) */
+  body.no-scroll { overflow: hidden; }
+  .lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .25s ease, visibility .25s ease;
+    z-index: 9999;
+  }
+  .lightbox-overlay.open { opacity: 1; visibility: visible; }
+  .lightbox-window {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    gap: 1rem;
+    width: min(1100px, 94vw);
+    max-height: 92vh;
+    background: #ffffff; /* light theme */
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    transform: scale(.96);
+    transition: transform .25s ease;
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .lightbox-overlay.open .lightbox-window { transform: scale(1); }
+  .lightbox-media { display: flex; align-items: center; justify-content: center; background: #f3f4f6; padding: 1rem;}
+  .lightbox-img { max-width: 100%; max-height: 65vh; display: block; object-fit: contain; }
+  .lightbox-side { padding: 1rem 1.25rem; color: #1f2937; overflow: auto; align-content: center; }
+  .lb-title { margin: 0 0 .5rem; font-size: 1.125rem; font-weight: 600; color: #111827; }
+  .lb-desc { margin: 0 0 1rem; font-size: .95rem; line-height: 1.5; color: #4b5563; }
+  .lb-link { color: #2563eb; text-decoration: none; }
+  .lb-link:hover { text-decoration: underline; }
+  @media (max-width: 720px) {
+    .lightbox-window { grid-template-columns: 1fr; width: 94vw; }
+  }
+
+  /* Dark theme adjustments */
+  .dark .lightbox-window { background: #0b0b0b; border-color: rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+  .dark .lightbox-media { background: #111; }
+  .dark .lightbox-side { color: #e5e7eb; }
+  .dark .lb-title { color: #ffffff; }
+  .dark .lb-desc { color: #cbd5e1; }
+  .dark .lb-link { color: #93c5fd; }
+</style>
+<script src="/scripts/gallery-lazy.js" defer></script>
+<script src="/scripts/gallery-page.js" defer></script>

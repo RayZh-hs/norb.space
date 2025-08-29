@@ -104,12 +104,45 @@ const typographyConfig = {
         '0 0 0 1px hsl(var(--primary-foreground) / 1), 0 3px hsl(var(--primary-foreground) / 1)'
     },
     strong: {
-      'font-weight': '600',
+      'font-weight': '500',
       color: fg
     },
     a: {
       'font-weight': '500',
       color: fg
+    },
+    // Code styling overrides (remove default backtick quotes and improve visuals)
+    // Inline code
+    'code': {
+      'background-color': 'hsl(var(--muted) / 0.35)',
+      padding: '0.15rem 0.4rem',
+      'border-radius': '0.4rem',
+      border: '1.5px solid hsl(var(--border) / 0.8)',
+      'font-size': '0.875em',
+      'font-weight': '400',
+      'font-family': 'var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace)'
+    },
+    // Remove the decorative backticks added by the typography preset
+    'code::before,code::after': {
+      content: '""'
+    },
+    // Don't style code inside pre redundantly
+    'pre code': {
+      'background-color': 'transparent',
+      padding: '0',
+      border: '0',
+      'font-size': 'inherit',
+      'font-weight': 'inherit'
+    },
+    // Block code
+    pre: {
+      'background-color': 'hsl(var(--muted) / 0.5)',
+      padding: '1rem 1.1rem',
+      'border-radius': '0.75rem',
+      border: '1px solid hsl(var(--border) / 0.8)',
+      'overflow-x': 'auto',
+      'line-height': '1.4',
+      'font-size': '0.875em'
     }
   }
 }
@@ -155,7 +188,9 @@ export default defineConfig({
     presetUno(), // required
     presetTypography(typographyConfig)
   ],
-  rules: [],
+  rules: [
+    ['from-background', { '--un-gradient-from': '' }]
+  ],
   theme: {
     colors: themeColors
   },
