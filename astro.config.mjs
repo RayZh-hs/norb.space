@@ -6,6 +6,7 @@ import AstroPureIntegration from 'astro-pure'
 import { defineConfig } from 'astro/config'
 import rehypeKatex from 'rehype-katex'
 import remarkMath from 'remark-math'
+import { remarkGithubCard } from './src/plugins/remark-github-card.ts'
 import UnoCSS from 'unocss/astro'
 
 // Others
@@ -76,7 +77,7 @@ export default defineConfig({
   },
   // Markdown Options
   markdown: {
-    remarkPlugins: [remarkMath],
+  remarkPlugins: [remarkMath, remarkGithubCard],
     rehypePlugins: [
       [rehypeKatex, {}],
       rehypeHeadingIds,
