@@ -51,7 +51,7 @@ function getSlug(entry: CollectionEntry<'gallery'>): string {
   return entry.id.replace(/\/index\.md$/, '')
 }
 
-async function buildFrame(entry: CollectionEntry<'gallery'>, frameIndex: number, totalFrames: number): Promise<GalleryFrame> {
+async function buildFrame(entry: CollectionEntry<'gallery'>, frameIndex: number): Promise<GalleryFrame> {
   const frameData = entry.data.frames[frameIndex]
   const raw = frameData.raw
 
@@ -101,7 +101,7 @@ async function buildFrame(entry: CollectionEntry<'gallery'>, frameIndex: number,
     format: (preview.options.format ?? 'webp').toString()
   }
 
-  const effectiveTitle = frameData.title ?? (totalFrames > 1 ? `${entry.data.title} — ${frameIndex + 1}/${totalFrames}` : entry.data.title)
+  const effectiveTitle = frameData.title ?? entry.data.title
   const effectiveDescription = frameData.description ?? entry.data.description
   const effectiveTags = frameData.tags.length ? frameData.tags : entry.data.tags
 
@@ -120,9 +120,8 @@ async function buildFrame(entry: CollectionEntry<'gallery'>, frameIndex: number,
 }
 
 async function buildItem(entry: CollectionEntry<'gallery'>): Promise<GalleryItem> {
-  const totalFrames = entry.data.frames.length
   const frames = await Promise.all(
-    entry.data.frames.map((_, index) => buildFrame(entry, index, totalFrames))
+    entry.data.frames.map((_, index) => buildFrame(entry, index))
   )
 
   return {
