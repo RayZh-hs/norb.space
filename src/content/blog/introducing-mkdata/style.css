@@ -1,0 +1,15 @@
+.main {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    background-image: linear-gradient(to top, #b0b8bd 0%, #cdd4d8 100%);
+}
+
+.main img {
+    margin: auto;
+    border-radius: 1rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.325);
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+}

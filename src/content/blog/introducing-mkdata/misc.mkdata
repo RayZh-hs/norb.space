@@ -1,0 +1,16 @@
+Title as comment
+
+@run {
+    @for x in range(10) {
+        @redirect str(x) + '.in'
+
+        # Number of points
+        n: rint(500, 1000) \n
+        @loop n {
+            rint(1, 1000) # Point x
+            rint(1, 1000) # Point y
+            \n
+        }
+        \n # Conclude with a newline
+    }
+}
