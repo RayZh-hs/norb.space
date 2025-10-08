@@ -27,7 +27,13 @@ const meta = {
 <div id="lightbox" class="lightbox-overlay" aria-hidden="true">
   <div class="lightbox-window">
     <div class="lightbox-media">
+      <button id="lightbox-prev" class="lightbox-nav lightbox-prev" type="button" aria-label="Previous image" hidden>
+        <span aria-hidden="true" class="lightbox-nav-icon">←</span>
+      </button>
       <img id="lightbox-img" class="lightbox-img" alt="" />
+      <button id="lightbox-next" class="lightbox-nav lightbox-next" type="button" aria-label="Next image" hidden>
+        <span aria-hidden="true" class="lightbox-nav-icon">→</span>
+      </button>
     </div>
     <aside class="lightbox-side">
       <h3 id="lightbox-title" class="lb-title"></h3>
@@ -144,8 +150,34 @@ const meta = {
     border: 1px solid rgba(0,0,0,0.06);
   }
   .lightbox-overlay.open .lightbox-window { transform: scale(1); }
-  .lightbox-media { display: flex; align-items: center; justify-content: center; background: #f3f4f6; padding: 1rem;}
+  .lightbox-media { position: relative; display: flex; align-items: center; justify-content: center; background: #f3f4f6; padding: 1rem;}
   .lightbox-img { max-width: 100%; max-height: 65vh; display: block; object-fit: contain; }
+  .lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    border: none;
+    background: rgba(17, 24, 39, 0.65);
+    color: #f9fafb;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: background .2s ease, transform .2s ease;
+  }
+  .lightbox-nav span { font-size: 1rem; transition: all .2s ease; transform-origin: center; }
+  .lightbox-nav:hover { background: rgba(17, 24, 39, 0.8); transform: translateY(-50%) scale(1.05); }
+  .lightbox-nav:hover span { font-size: 1.05rem; }
+  .lightbox-nav:disabled,
+  .lightbox-nav[hidden] {
+    opacity: 0.4;
+    cursor: default;
+    /* display: none; */
+  }
+  .lightbox-prev { left: 1rem; }
+  .lightbox-next { right: 1rem; height: 2.5rem; }
   .lightbox-side { padding: 1rem 1.25rem; color: #1f2937; overflow: auto; align-content: center; }
   .lb-title { margin: 0 0 .5rem; font-size: 1.125rem; font-weight: 600; color: #111827; }
   .lb-desc { margin: 0 0 1rem; font-size: .95rem; line-height: 1.5; color: #4b5563; }
@@ -160,6 +192,8 @@ const meta = {
   /* Dark theme adjustments */
   .dark .lightbox-window { background: #0b0b0b; border-color: rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,.35); }
   .dark .lightbox-media { background: #111; }
+  .dark .lightbox-nav { background: rgba(255, 255, 255, 0.18); color: #f3f4f6; }
+  .dark .lightbox-nav:hover { background: rgba(255, 255, 255, 0.26); }
   .dark .lightbox-side { color: #e5e7eb; }
   .dark .lb-title { color: #ffffff; }
   .dark .lb-desc { color: #cbd5e1; }

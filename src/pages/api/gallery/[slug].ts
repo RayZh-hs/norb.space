@@ -20,13 +20,18 @@ export const GET: APIRoute = async ({ params, request }) => {
   const url = new URL(request.url)
   const size = url.searchParams.get('size')
 
+  const frameParam = url.searchParams.get('frame')
+  const frameIndex = frameParam !== null ? Number.parseInt(frameParam, 10) : 0
+  const frame = Number.isFinite(frameIndex) ? item.frames[frameIndex] ?? item.cover : item.cover
+
   if (size === 'raw' || size === 'small' || size === 'preview') {
-    const image = item.images[size]
+    const image = frame.images[size]
     return new Response(
       JSON.stringify({
         slug: item.slug,
-        title: item.title,
-        alt: item.title,
+        title: frame.title,
+        alt: frame.title,
+        frame: frame.index,
         image
       }),
       { headers }

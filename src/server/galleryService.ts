@@ -6,11 +6,24 @@ const SMALL_WIDTH = 960
 const SMALL_QUALITY = 78
 const PREVIEW_QUALITY = 45
 
-export type GalleryItemImage = {
+export type GalleryImageVariant = {
   src: string
   width: number
   height: number
   format: string
+}
+
+export type GalleryFrame = {
+  index: number
+  title: string
+  description: string
+  tags: string[]
+  aspectRatio: number
+  images: {
+    preview: GalleryImageVariant
+    small: GalleryImageVariant
+    raw: GalleryImageVariant
+  }
 }
 
 export type GalleryItem = {
@@ -22,12 +35,8 @@ export type GalleryItem = {
   shootDate: string | null
   camera: string | null
   externalLink: string | null
-  aspectRatio: number
-  images: {
-    preview: GalleryItemImage
-    small: GalleryItemImage
-    raw: GalleryItemImage
-  }
+  frames: GalleryFrame[]
+  cover: GalleryFrame
 }
 
 type GalleryCache = {
@@ -42,28 +51,30 @@ function getSlug(entry: CollectionEntry<'gallery'>): string {
   return entry.id.replace(/\/index\.md$/, '')
 }
 
-async function buildItem(entry: CollectionEntry<'gallery'>): Promise<GalleryItem> {
-  const raw = entry.data.rawImage
+async function buildFrame(entry: CollectionEntry<'gallery'>, frameIndex: number, totalFrames: number): Promise<GalleryFrame> {
+  const frameData = entry.data.frames[frameIndex]
+  const raw = frameData.raw
 
-  const small = await getImage({
-    src: raw,
-    width: SMALL_WIDTH,
-    fit: 'inside',
-    format: 'webp',
-    quality: SMALL_QUALITY
-  })
-
-  const preview = await getImage({
-    src: raw,
-    width: PREVIEW_WIDTH,
-    fit: 'cover',
-    format: 'webp',
-    quality: PREVIEW_QUALITY
-  })
+  const [small, preview] = await Promise.all([
+    getImage({
+      src: raw,
+      width: SMALL_WIDTH,
+      fit: 'inside',
+      format: 'webp',
+      quality: SMALL_QUALITY
+    }),
+    getImage({
+      src: raw,
+      width: PREVIEW_WIDTH,
+      fit: 'cover',
+      format: 'webp',
+      quality: PREVIEW_QUALITY
+    })
+  ])
 
   const aspectRatio = raw.width / raw.height
 
-  const rawImage: GalleryItemImage = {
+  const rawVariant: GalleryImageVariant = {
     src: raw.src,
     width: raw.width,
     height: raw.height,
@@ -73,7 +84,7 @@ async function buildItem(entry: CollectionEntry<'gallery'>): Promise<GalleryItem
   const smallWidth = small.options.width ?? SMALL_WIDTH
   const smallHeight = small.options.height ?? Math.round(smallWidth / aspectRatio)
 
-  const smallImage: GalleryItemImage = {
+  const smallVariant: GalleryImageVariant = {
     src: small.src,
     width: smallWidth,
     height: smallHeight,
@@ -83,12 +94,36 @@ async function buildItem(entry: CollectionEntry<'gallery'>): Promise<GalleryItem
   const previewWidth = preview.options.width ?? PREVIEW_WIDTH
   const previewHeight = preview.options.height ?? Math.round(previewWidth / aspectRatio)
 
-  const previewImage: GalleryItemImage = {
+  const previewVariant: GalleryImageVariant = {
     src: preview.src,
     width: previewWidth,
     height: previewHeight,
     format: (preview.options.format ?? 'webp').toString()
   }
+
+  const effectiveTitle = frameData.title ?? (totalFrames > 1 ? `${entry.data.title} — ${frameIndex + 1}/${totalFrames}` : entry.data.title)
+  const effectiveDescription = frameData.description ?? entry.data.description
+  const effectiveTags = frameData.tags.length ? frameData.tags : entry.data.tags
+
+  return {
+    index: frameIndex,
+    title: effectiveTitle,
+    description: effectiveDescription,
+    tags: effectiveTags,
+    aspectRatio,
+    images: {
+      preview: previewVariant,
+      small: smallVariant,
+      raw: rawVariant
+    }
+  }
+}
+
+async function buildItem(entry: CollectionEntry<'gallery'>): Promise<GalleryItem> {
+  const totalFrames = entry.data.frames.length
+  const frames = await Promise.all(
+    entry.data.frames.map((_, index) => buildFrame(entry, index, totalFrames))
+  )
 
   return {
     slug: getSlug(entry),
@@ -99,12 +134,8 @@ async function buildItem(entry: CollectionEntry<'gallery'>): Promise<GalleryItem
     shootDate: entry.data.shootDate ? entry.data.shootDate.toISOString() : null,
     camera: entry.data.camera ?? null,
     externalLink: entry.data.externalLink ?? null,
-  aspectRatio,
-    images: {
-      preview: previewImage,
-      small: smallImage,
-      raw: rawImage
-    }
+    frames,
+    cover: frames[0]
   }
 }
 

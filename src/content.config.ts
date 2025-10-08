@@ -61,21 +61,67 @@ const projects = defineCollection({
 
 const gallery = defineCollection({
   loader: glob({ base: './src/content/gallery', pattern: '**/index.md' }),
-  schema: ({ image }) =>
-    z.object({
-      title: z.string().max(80),
-      description: z.string().max(240),
-      alt: z.string().max(160).optional(),
-      tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
-      location: z.string().optional(),
-      shootDate: z.preprocess((value) => {
-        if (typeof value === 'string' && value.trim().toLowerCase() === 'unknown') return undefined
-        return value
-      }, z.coerce.date().optional()),
-      camera: z.string().optional(),
-      rawImage: image(),
-      externalLink: z.string().url().optional()
-    })
+  schema: ({ image }) => {
+    const imageRef = image()
+    const frameInput = z.union([
+      z.object({
+        raw: imageRef,
+        title: z.string().max(120).optional(),
+        description: z.string().max(240).optional(),
+        tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase).optional(),
+      }),
+      imageRef.transform((src) => ({ raw: src, title: undefined, description: undefined, tags: [] as string[] }))
+    ])
+
+    return z
+      .object({
+        title: z.string().max(80),
+        description: z.string().max(320),
+        tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
+        location: z.string().optional(),
+        shootDate: z.preprocess((value) => {
+          if (typeof value === 'string' && value.trim().toLowerCase() === 'unknown') return undefined
+          return value
+        }, z.coerce.date().optional()),
+        camera: z.string().optional(),
+        externalLink: z.string().url().optional(),
+        frames: z.array(frameInput).optional(),
+        rawImages: z.array(imageRef).optional(),
+        rawImage: imageRef.optional()
+      })
+      .transform((data) => {
+        let framesSource = data.frames && data.frames.length ? data.frames : undefined
+        if (!framesSource || !framesSource.length) {
+          if (data.rawImages && data.rawImages.length) {
+            framesSource = data.rawImages.map((src) => ({ raw: src, title: undefined, description: undefined, tags: [] as string[] }))
+          } else if (data.rawImage) {
+            framesSource = [{ raw: data.rawImage, title: undefined, description: undefined, tags: [] as string[] }]
+          }
+        }
+        if (!framesSource || !framesSource.length) {
+          throw new Error(`Gallery entry "${data.title}" must declare at least one image via 'frames' or 'rawImages'.`)
+        }
+
+        const frames = framesSource.map((frame, index) => ({
+          index,
+          raw: frame.raw,
+          title: frame.title,
+          description: frame.description,
+          tags: removeDupsAndLowerCase(frame.tags ?? [])
+        }))
+
+        return {
+          title: data.title,
+          description: data.description,
+          tags: data.tags,
+          location: data.location,
+          shootDate: data.shootDate,
+          camera: data.camera,
+          externalLink: data.externalLink,
+          frames
+        }
+      })
+  }
 })
 
 // Define docs collection
