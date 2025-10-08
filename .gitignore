@@ -79,3 +79,5 @@ bunfig.toml
 /src/content/blog/test.*
 /test/
 sharable/
+
+.vscode
