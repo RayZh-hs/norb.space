@@ -59,6 +59,25 @@ const projects = defineCollection({
   }),
 });
 
+const gallery = defineCollection({
+  loader: glob({ base: './src/content/gallery', pattern: '**/index.md' }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string().max(80),
+      description: z.string().max(240),
+      alt: z.string().max(160).optional(),
+      tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
+      location: z.string().optional(),
+      shootDate: z.preprocess((value) => {
+        if (typeof value === 'string' && value.trim().toLowerCase() === 'unknown') return undefined
+        return value
+      }, z.coerce.date().optional()),
+      camera: z.string().optional(),
+      rawImage: image(),
+      externalLink: z.string().url().optional()
+    })
+})
+
 // Define docs collection
 const docs = defineCollection({
   loader: glob({ base: './src/content/docs', pattern: '**/*.{md,mdx}' }),
@@ -73,4 +92,4 @@ const docs = defineCollection({
     })
 })
 
-export const collections = { blog, docs, projects }
+export const collections = { blog, docs, projects, gallery }

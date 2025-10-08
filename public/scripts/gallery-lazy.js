@@ -10,20 +10,38 @@
       entries.forEach(function (entry) {
         if (!entry.isIntersecting) return
         var img = entry.target
-        var highSrc = img.getAttribute('data-src')
-        if (!highSrc) {
+        var nextSrc = img.getAttribute('data-src')
+        var rawSrc = img.getAttribute('data-raw')
+
+        if (!nextSrc) {
           observer.unobserve(img)
           return
         }
 
-        var handleLoad = function () {
-          img.classList.add('is-loaded')
-          img.removeEventListener('load', handleLoad)
-        }
-        img.addEventListener('load', handleLoad, { once: true })
+        var onSmallLoad = function () {
+          img.removeEventListener('load', onSmallLoad)
+          img.setAttribute('data-loaded-small', 'true')
 
-        // Switch to high res
-        img.src = highSrc
+          if (!rawSrc) {
+            img.classList.add('is-loaded')
+            return
+          }
+
+          var loader = new Image()
+          loader.onload = function () {
+            img.src = rawSrc
+            img.classList.add('is-loaded')
+          }
+          loader.onerror = function () {
+            img.classList.add('is-loaded')
+          }
+          loader.src = rawSrc
+          img.removeAttribute('data-raw')
+        }
+
+        img.addEventListener('load', onSmallLoad, { once: true })
+
+        img.src = nextSrc
         img.removeAttribute('data-src')
         observer.unobserve(img)
       })

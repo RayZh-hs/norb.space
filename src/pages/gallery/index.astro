@@ -32,6 +32,7 @@ const meta = {
     <aside class="lightbox-side">
       <h3 id="lightbox-title" class="lb-title"></h3>
       <p id="lightbox-desc" class="lb-desc"></p>
+      <div id="lightbox-tags" class="lb-tags" style="display:none"></div>
       <a id="lightbox-link" class="lb-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none">Read blog post →</a>
     </aside>
   </div>
@@ -39,7 +40,7 @@ const meta = {
 
 <style is:global>
   .gallery-grid {
-  column-gap: 1.25rem; /* horizontal gap between columns */
+    column-gap: 1.25rem; /* horizontal gap between columns */
     column-count: 1;
   }
 
@@ -70,7 +71,7 @@ const meta = {
   /* Blur-up styles */
   .lazy-img {
     filter: blur(24px);
-  transform: scale(1.03);
+    transform: scale(1.03);
     transition: filter .4s ease, transform .4s ease, opacity .3s ease;
     opacity: .85;
   }
@@ -148,6 +149,8 @@ const meta = {
   .lightbox-side { padding: 1rem 1.25rem; color: #1f2937; overflow: auto; align-content: center; }
   .lb-title { margin: 0 0 .5rem; font-size: 1.125rem; font-weight: 600; color: #111827; }
   .lb-desc { margin: 0 0 1rem; font-size: .95rem; line-height: 1.5; color: #4b5563; }
+  .lb-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+  .lb-tag { display: inline-flex; align-items: center; padding: 0.25rem 0.5rem; border-radius: 999px; background: rgba(37, 99, 235, 0.12); color: #1f2937; font-size: 0.75rem; letter-spacing: 0.02em; text-transform: uppercase; font-weight: 600; }
   .lb-link { color: #2563eb; text-decoration: none; }
   .lb-link:hover { text-decoration: underline; }
   @media (max-width: 720px) {
@@ -160,6 +163,7 @@ const meta = {
   .dark .lightbox-side { color: #e5e7eb; }
   .dark .lb-title { color: #ffffff; }
   .dark .lb-desc { color: #cbd5e1; }
+  .dark .lb-tag { background: rgba(96, 165, 250, 0.18); color: #e5e7eb; }
   .dark .lb-link { color: #93c5fd; }
 </style>
 <script src="/scripts/gallery-lazy.js" defer></script>
