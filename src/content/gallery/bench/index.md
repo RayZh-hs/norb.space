@@ -1,12 +1,12 @@
 ---
 title: "Bench"
-description: "An empty park bench watches over a quiet path, inviting a pause in the middle of the day."
+description: "In a tranquil corner in the campus of SJTU, a bench lay watching a winding path."
 alt: "Wooden bench framed by trees along a curved park path."
 tags:
-  - urban
-  - solitude
-  - park
-location: "Zhongshan Park, Shanghai"
-shootDate: 2023-11-12
+  - Nature
+  - Photography
+  - Campus
+location: "Botanical Garden, Shanghai Jiao Tong University"
+shootDate: 2025-4-18
 rawImage: ./raw.jpg
 ---

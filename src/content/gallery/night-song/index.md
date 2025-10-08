@@ -1,12 +1,10 @@
 ---
 title: "Night Song"
-description: "Neon reflections ripple across the river while a lone boat drifts through the quiet night."
-alt: "City lights reflecting on dark water with a small boat in the foreground."
+description: "The night is quiet, the winds soft. The scent of leaves fill the air, and occasional drips of water break the silence."
 tags:
-  - night
-  - reflections
-  - urban
-location: "Huangpu River, Shanghai"
-shootDate: 2023-09-22
+  - Night
+  - Photography
+location: "Yixing Wuxi"
+shootDate: 2025-10-2
 rawImage: ./raw.jpg
 ---

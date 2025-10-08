@@ -4,7 +4,9 @@ description: "Captured outside of the main library building at Shanghai Jiao Ton
 tags:
   - Nature
   - Photography
+  - Campus
 location: "Shanghai Jiao Tong University, Shanghai"
+shootDate: 2024-12-28
 frames:
   - raw: ./raw-p0.jpg
   - raw: ./raw-p1.jpg

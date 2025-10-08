@@ -1,12 +1,10 @@
 ---
 title: "Moss Study"
-description: "A macro study of moss reveals a miniature forest glowing with reflected light."
-alt: "Macro view of moss with sparkling highlights on tiny stalks."
+description: "A macro study of moss on stone."
 tags:
-  - macro
-  - texture
-  - green
-location: "Longhua Temple Garden, Shanghai"
-shootDate: 2023-12-28
+  - Nature
+  - Photography
+location: "Lin'an Hangzhou"
+shootDate: 2025-5-4
 rawImage: ./raw.jpg
 ---

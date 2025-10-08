@@ -1,12 +1,10 @@
 ---
 title: "Where There Is Water There Is Life"
-description: "A lone plant rises from a tidal pool, quiet proof that even the smallest water brings growth."
-alt: "Single green plant emerging from shallow tidal water with ripples."
+description: "And where there is life there is hope."
 tags:
-  - minimalism
-  - water
-  - resilience
-location: "Dongtan Wetland, Chongming"
-shootDate: 2023-04-29
+  - Nature
+  - Photography
+location: "Chenshan Botanical Garden, Shanghai"
+shootDate: 2025-5-11
 rawImage: ./raw.jpg
 ---

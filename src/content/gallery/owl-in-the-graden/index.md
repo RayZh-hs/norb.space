@@ -1,12 +1,12 @@
 ---
 title: "Owl in the Garden"
-description: "An owl sculpture peers from behind ivy, blending art and nature in the evening garden."
-alt: "Stone owl statue partially hidden among green ivy leaves."
+description: "In the Botanical Garden near the Rosa center, an owl sculpture peers from stone pedestal."
+alt: "Closeup view of stone owl statue."
 tags:
   - sculpture
   - garden
   - whimsy
 location: "Chenshan Botanical Garden, Shanghai"
-shootDate: 2023-05-14
+shootDate: 2025-5-7
 rawImage: ./raw.jpg
 ---
