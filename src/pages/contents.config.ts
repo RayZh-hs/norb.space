@@ -13,21 +13,21 @@ export const hobbies = [
         icon: '🎨',
         title: 'Amateur CG Artist',
         description: 'Exploring 3D modeling and rendering. Love the freedom of storytelling through visual art.',
-        link: '/portfolio', // Optional: Link to a portfolio page
+        link: '/gallery', // Optional: Link to a portfolio page
         linkText: 'View Portfolio'
     },
     {
         icon: '🎮',
         title: 'Indie Game Developer',
         description: 'Keen on designing and developing puzzle games. Prepare to bend your mind!',
-        link: '/projects#neutronic', // Optional: Link to project detail
+        link: '/about', // Optional: Link to project detail
         linkText: 'Play Neutronic'
     },
     {
         icon: '🧱',
         title: 'Minecraft Modder & Redstoner',
-        description: 'Keen on crafting digital Redstone circuits and developing  mods. Pushing the boundaries of block-based creativity.',
-        link: 'https://github.com/your-repo', // Optional: Link to relevant repo/page
+        description: 'Keen on crafting digital Redstone circuits and developing mods. Pushing the boundaries of block-based creativity.',
+        link: 'https://github.com/RayZh-hs/SJMCL', // Optional: Link to relevant repo/page
         linkText: 'Explore Mods'
     }
 ]
@@ -60,6 +60,5 @@ export const emailAddress = 'ray_zh@sjtu.edu.cn'
 export const socials = [
     { name: 'Email', url: 'mailto:' + emailAddress, icon: 'carbon:email' },
     { name: 'Github', url: 'https://github.com/RayZh-hs', icon: 'carbon:logo-github' },
-    // { name: 'LinkedIn', url: '#', icon: 'carbon:logo-linkedin' },
     { name: 'WeChat', url: 'https://u.wechat.com/MOTpBKnK_SnffegtAi6mILY', icon: 'carbon:logo-wechat' },
 ]
