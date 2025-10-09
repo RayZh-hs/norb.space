@@ -2,25 +2,38 @@
 import { Svg } from 'astro-pure/user'
 import { cn } from 'astro-pure/utils'
 
+type IconImport = Promise<typeof import('*.svg?raw')>
+
+interface IconVariants {
+  light: IconImport
+  dark: IconImport
+}
+
+interface ToolItem {
+  name: string
+  description: string
+  href: string
+  icon: IconImport | IconVariants
+}
+
 interface Props {
   class?: string
-  title: string
-  tools: {
-    name: string
-    description: string
-    href: string
-    icon: Promise<typeof import('*.svg?raw')>
-  }[]
+  title?: string
+  tools: ToolItem[]
 }
 
 const { class: className, title, tools, ...props } = Astro.props
+
+const isVariantIcon = (icon: ToolItem['icon']): icon is IconVariants =>
+  typeof icon === 'object' && icon !== null && 'light' in icon && 'dark' in icon
+const iconBaseClass = 'size-10 shrink-0 rounded-lg bg-primary-foreground p-2'
 ---
 
 <div
   class={cn('not-prose flex flex-col rounded-xl border py-3 px-3 gap-y-3 sm:gap-y-4', className)}
   {...props}
 >
-  <div class='m-0 px-2 text-lg font-medium'>{title}</div>
+  {title && <div class='m-0 px-2 text-lg font-medium'>{title}</div>}
   <div class='grid grid-cols-1 gap-x-2 gap-y-2 sm:grid-cols-2'>
     {
       tools.map((tool) => (
@@ -31,10 +44,24 @@ const { class: className, title, tools, ...props } = Astro.props
           target='_blank'
         >
           <div class='flex items-center gap-x-3 rounded-lg border border-transparent px-1.5 py-1 transition-colors hover:border-border hover:bg-muted'>
-            <Svg
-              src={tool.icon}
-              class='size-10 rounded-lg bg-primary-foreground fill-foreground p-2'
-            />
+            {
+              isVariantIcon(tool.icon) ? (
+                <>
+                  <Svg
+                    src={tool.icon.light}
+                    class={cn(iconBaseClass, 'dark:hidden')}
+                    aria-hidden='true'
+                  />
+                  <Svg
+                    src={tool.icon.dark}
+                    class={cn(iconBaseClass, 'hidden dark:block')}
+                    aria-hidden='true'
+                  />
+                </>
+              ) : (
+                <Svg src={tool.icon} class={iconBaseClass} aria-hidden='true' />
+              )
+            }
             <div class='z-20 flex flex-col'>
               <div class='font-medium text-foreground'>{tool.name}</div>
               <div class='font-normal'>{tool.description}</div>
