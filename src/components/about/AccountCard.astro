@@ -1,0 +1,120 @@
+---
+import type { AstroComponentFactory } from 'astro/runtime/server/index.js'
+
+import { cn } from 'astro-pure/utils'
+
+type IconLike =
+  | AstroComponentFactory
+  | Promise<AstroComponentFactory>
+  | Promise<{ default: AstroComponentFactory }>
+  | { default: AstroComponentFactory }
+  | null
+
+interface AccountCardProps {
+  href: string
+  title: string
+  subtitle?: string
+  description?: string
+  rel?: string
+  target?: string
+  icon?: IconLike
+  class?: string
+}
+
+const {
+  href,
+  title,
+  subtitle,
+  description,
+  rel = 'me noopener noreferrer',
+  target = '_blank',
+  icon,
+  class: className
+} = Astro.props as AccountCardProps
+
+let Icon: AstroComponentFactory | null = null
+
+if (icon) {
+  const resolved = icon instanceof Promise ? await icon : icon
+  if (typeof resolved === 'function') {
+    Icon = resolved
+  } else if (typeof resolved === 'object' && resolved && 'default' in resolved) {
+    Icon = resolved.default
+  }
+}
+
+const ariaLabel = subtitle ? `${title} (${subtitle})` : title
+---
+
+<a
+  class={cn(
+    'account-card no-underline group grid grid-cols-[auto,1fr,auto] items-center gap-x-4 rounded-xl border border-border/60 bg-card px-4 py-3 text-left transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-border/40',
+    className
+  )}
+  href={href}
+  rel={rel}
+  target={target}
+  aria-label={ariaLabel}
+>
+  <div class='grid gap-1'>
+    <div class='flex flex-wrap items-center gap-2'>
+      <div class='icon-slot'>
+        <slot name='icon'>
+          {
+            Icon ? (
+              <Icon class='h-6 w-6' aria-hidden='true' />
+            ) : (
+              <svg
+                class='h-6 w-6'
+                viewBox='0 0 24 24'
+                xmlns='http://www.w3.org/2000/svg'
+                fill='none'
+                stroke='currentColor'
+                stroke-width='1.6'
+                stroke-linecap='round'
+                stroke-linejoin='round'
+                aria-hidden='true'
+              >
+                <path d='M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9Z' />
+                <path d='M3 12h18' />
+                <path d='M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9Z' />
+              </svg>
+            )
+          }
+        </slot>
+      </div>
+      <span class='text-base font-semibold text-foreground'>{title}</span>
+      {subtitle && <span class='ml-2 text-sm font-normal text-muted-foreground'>{subtitle}</span>}
+    </div>
+    {description && <p class='text-sm text-muted-foreground'>{description}</p>}
+  </div>
+  <svg
+    class='right-arrow h-5 w-5 translate-x-0 text-muted-foreground transition-transform group-hover:translate-x-1'
+    viewBox='0 0 24 24'
+    fill='none'
+    xmlns='http://www.w3.org/2000/svg'
+    stroke='currentColor'
+    stroke-width='1.6'
+    stroke-linecap='round'
+    stroke-linejoin='round'
+    aria-hidden='true'
+  >
+    <path d='M9 18l6-6-6-6'></path>
+  </svg>
+</a>
+
+<style>
+  .account-card:focus-visible {
+    outline: none;
+  }
+  .right-arrow {
+    position: absolute;
+    right: 1rem;
+  }
+  .icon-slot {
+    margin-right: 0.5rem;
+  }
+  :global(.dark) .icon-slot {
+    filter: invert(100%) hue-rotate(180deg);
+  }
+</style>

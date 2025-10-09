@@ -2,6 +2,7 @@
 import { Comment } from 'astro-pure/advanced'
 import { Collapse, Timeline } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
+import AccountCard from '@/components/about/AccountCard.astro'
 import Substats from '@/components/about/Substats.astro'
 import ToolSection from '@/components/about/ToolSection.astro'
 
@@ -15,20 +16,51 @@ const headings = [
 ---
 
 <PageLayout title='About' {headings} info='/about'>
-  <u>Student at Shanghai Jiao Tong University</u>
-  <p>Meet Norb: I am a college freshman and a passionate developer. I am also known in the field of Computer and Arts as RayZh.</p>
-
+  <h3 class='mb-4 text-lg font-semibold'>TL;DR</h3>
+  <p class='mb-8'>
+    My name is Ray Zhang, but just call me Norb. I am a professional developer, amateur digital
+    artist and indie game developer.
+  </p>
   {/* general-talk */}
-  <h2 id='hobbies'>Hobbies</h2>
-  <ul>
-    <li>Lorem ipsum dolor sit amet, vidit suscipit at mei.</li>
-    <li>
-      Quem denique mea id. Usu ei regione indoctum dissentiunt, cu meliore fuisset mei, vel quod
-      voluptua ne.
-    </li>
-    <li>Ex dicat impedit mel, at eum oratio possit voluptatum.</li>
-    <li>Impetus fuisset ullamcorper pri cu, his posse iisque ad, aliquam honestatis usu id.</li>
-  </ul>
+  <h2 id='hobbies'>All Walks of My Life</h2>
+  <div>
+    <p>
+      I have a wide variety of hobbies, and have established myself in numerous communities, under
+      different names. Here is a selected list of them:
+    </p>
+    <AccountCard
+      class='mb-4'
+      icon={import('/src/assets/logos/norb-logo-black-monotone.svg')}
+      title='Home Page'
+      subtitle='Under the name Norb'
+      description='Where I host dev-related and personal blogs, along with other online services.'
+      href='https://norb.space'
+    />
+    <AccountCard
+      class='mb-4'
+      icon={import('/src/assets/logos/github.svg')}
+      title='GitHub'
+      subtitle='Under the name RayZh-hs'
+      description='Where I am an active developer of multiple open-source projects.'
+      href='https://github.com/RayZh-hs'
+    />
+    <AccountCard
+      class='mb-4'
+      icon={import('/src/assets/logos/sketchfab.svg')}
+      title='Sketchfab'
+      subtitle='Under the name RayZh'
+      description='Where I am a renowned content creator, using photogrammetry to capture life as it is.'
+      href='https://sketchfab.com/horizon_studios'
+    />
+    <AccountCard
+      class='mb-4'
+      icon={import('/src/assets/logos/pexels.svg')}
+      title='Pexels'
+      subtitle='Under the name Ray Zhang'
+      description='Where I showcase my works of photography.'
+      href='https://www.pexels.com/@ray-zhang-2155334924/gallery/'
+    />
+  </div>
 
   {/* tools */}
   <h2 id='tools'>Tools</h2>
