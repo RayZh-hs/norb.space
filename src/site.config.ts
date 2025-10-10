@@ -48,7 +48,6 @@ export const theme: ThemeUserConfig = {
   header: {
     menu: [
       { title: 'Blog', link: '/blog' },
-      // { title: 'Docs', link: '/docs' },
       { title: 'Projects', link: '/projects' },
       // { title: 'Apps', link: '/apps' },
       { title: 'Gallery', link: '/gallery' },
@@ -81,23 +80,6 @@ export const theme: ThemeUserConfig = {
 }
 
 export const integ: IntegrationUserConfig = {
-  // Links menagement
-  // See: https://astro-pure.js.org/docs/integrations/links
-  links: {
-    // Friend logbook
-    logbook: [
-      { date: '2024-07-01', content: 'Lorem ipsum dolor sit amet.' },
-      { date: '2024-07-01', content: 'vidit suscipit at mei.' },
-      { date: '2024-07-01', content: 'Quem denique mea id.' }
-    ],
-    // Yourself link info
-    applyTip: [
-      { name: 'Name', val: theme.title },
-      { name: 'Desc', val: theme.description || 'Null' },
-      { name: 'Link', val: 'https://astro-pure.js.org/' },
-      { name: 'Avatar', val: 'https://astro-pure.js.org/favicon/favicon.ico' }
-    ]
-  },
   // Enable page search function
   pagefind: true,
   // Add a random quote to the footer (default on homepage footer)
