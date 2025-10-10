@@ -1,17 +1,24 @@
 ---
 import config from 'virtual:config'
 
+import type { iconsType } from '^/types'
+
 import { Icon } from '../user'
 
 const year = new Date().getFullYear()
 const footerConf = config.footer
-let social = footerConf.social || {}
 
-// If the list does not contain rss, add it
-social.rss = {
-  label: 'RSS',
-  url: '/rss.xml'
-}
+const social = {
+  ...(footerConf.social ?? {}),
+  rss: {
+    label: 'RSS',
+    url: '/rss.xml'
+  }
+} satisfies Record<string, { label?: string; url: string }>
+
+const socialEntries = Object.entries(social) as Array<
+  [iconsType, { label?: string; url: string }]
+>
 ---
 
 <footer class='mx-auto mb-5 mt-16'>
@@ -56,14 +63,13 @@ social.rss = {
       {/* Social Brands */}
       <div class='flex items-center gap-x-4'>
         {
-          footerConf.social &&
-            Object.entries(footerConf.social).map(([platform, { label, url }]) => (
+          socialEntries.map(([platform, { label, url }]) => (
               <a
                 class='inline-block text-muted-foreground transition-all hover:text-muted-foreground/75'
                 href={url}
-                aria-label={label}
+                aria-label={label ?? platform}
               >
-                <Icon name={platform as keyof typeof footerConf.social} />
+                <Icon name={platform} />
               </a>
             ))
         }

@@ -1,19 +1,24 @@
+import type { Element } from 'hast'
 import { h } from 'hastscript'
-import type { ShikiTransformer } from 'shiki'
+import type {
+  ShikiTransformer,
+  ShikiTransformerContext,
+  ShikiTransformerContextCommon
+} from 'shiki'
 
 export {
   transformerNotationDiff,
   transformerNotationHighlight
 } from './shiki-official-transformers'
 
-function parseMetaString(str = '') {
+function parseMetaString(str = ''): Record<string, string | true> {
   return Object.fromEntries(
     str.split(' ').reduce((acc: [string, string | true][], cur) => {
       const matched = cur.match(/(.+)?=("(.+)"|'(.+)')$/)
-      if (matched === null) return acc
-      const key = matched[1]
+      if (!matched) return acc
+      const key = matched[1] ?? ''
       const value = matched[3] || matched[4] || true
-      acc = [...acc, [key, value]]
+      acc.push([key, value])
       return acc
     }, [])
   )
@@ -23,7 +28,7 @@ function parseMetaString(str = '') {
 export const updateStyle = (): ShikiTransformer => {
   return {
     name: 'shiki-transformer-update-style',
-    pre(node) {
+    pre(this: ShikiTransformerContext, node: Element) {
       const container = h('pre', node.children)
       node.children = [container]
       node.tagName = 'div'
@@ -35,7 +40,7 @@ export const updateStyle = (): ShikiTransformer => {
 export const processMeta = (): ShikiTransformer => {
   return {
     name: 'shiki-transformer-process-meta',
-    preprocess() {
+    preprocess(this: ShikiTransformerContextCommon) {
       if (!this.options.meta) return
       const rawMeta = this.options.meta?.__raw
       if (!rawMeta) return
@@ -49,7 +54,7 @@ export const processMeta = (): ShikiTransformer => {
 export const addTitle = (): ShikiTransformer => {
   return {
     name: 'shiki-transformer-add-title',
-    pre(node) {
+    pre(this: ShikiTransformerContext, node: Element) {
       const rawMeta = this.options.meta?.__raw
       if (!rawMeta) return
       const meta = parseMetaString(rawMeta)
@@ -77,7 +82,7 @@ export const addTitle = (): ShikiTransformer => {
 export const addLanguage = (): ShikiTransformer => {
   return {
     name: 'shiki-transformer-add-language',
-    pre(node) {
+    pre(this: ShikiTransformerContext, node: Element) {
       const span = h(
         'span',
         {
@@ -96,7 +101,7 @@ export const addCopyButton = (timeout?: number): ShikiTransformer => {
 
   return {
     name: 'shiki-transformer-copy-button',
-    pre(node) {
+    pre(this: ShikiTransformerContext, node: Element) {
       const button = h(
         'button',
         {

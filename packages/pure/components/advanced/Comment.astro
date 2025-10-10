@@ -3,6 +3,7 @@ import config from 'virtual:config'
 
 import '@waline/client/style'
 
+
 import { cn } from '../../utils'
 
 const { class: className } = Astro.props
@@ -19,40 +20,37 @@ const { class: className } = Astro.props
 }
 
 <script>
-  import { init as walineInit } from '@waline/client'
-  import type { WalineEmojiPresets } from '@waline/client'
-  import config from 'virtual:config'
+  import { init as walineInit } from '@waline/client';
+  import type { WalineEmojiPresets } from '@waline/client';
+  import config from 'virtual:config';
 
-  const walineConfig = config.integ.waline
+  const walineConfig = config.integ.waline;
 
   class Comment extends HTMLElement {
     constructor() {
-      super()
+      super();
     }
 
     connectedCallback() {
       // Prevent Vue log errors
-      ;(globalThis as unknown as { __VUE_OPTIONS_API__: boolean }).__VUE_OPTIONS_API__ = true
-      ;(globalThis as unknown as { __VUE_PROD_DEVTOOLS__: boolean }).__VUE_PROD_DEVTOOLS__ = false
-      ;(
+      (globalThis as unknown as { __VUE_OPTIONS_API__: boolean }).__VUE_OPTIONS_API__ = true;
+      (globalThis as unknown as { __VUE_PROD_DEVTOOLS__: boolean }).__VUE_PROD_DEVTOOLS__ = false;
+      (
         globalThis as unknown as { __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: boolean }
-      ).__VUE_PROD_HYDRATION_MISMATCH_DETAILS__ = false
-
-      const emoji = walineConfig.emoji?.map(
-        (preset) => `${config.npmCDN}/@waline/emojis@1.2.0/${preset}` as WalineEmojiPresets
-      )
+      ).__VUE_PROD_HYDRATION_MISMATCH_DETAILS__ = false;
 
       walineInit({
         el: '#waline',
         serverURL: walineConfig.server || '',
-        emoji,
+        emoji: walineConfig.emoji as WalineEmojiPresets[],
+
         reaction: ['/icons/heart-item.svg'],
-        ...walineConfig.additionalConfigs
-      })
+        ...walineConfig.additionalConfigs,
+      });
     }
   }
 
-  if (walineConfig.enable) customElements.define('comment-component', Comment)
+  if (walineConfig.enable) customElements.define('comment-component', Comment);
 </script>
 
 <style>

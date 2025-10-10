@@ -1,33 +1,22 @@
 // @ts-check
 
-import { rehypeHeadingIds } from '@astrojs/markdown-remark'
-import vercel from '@astrojs/vercel'
-import AstroPureIntegration from 'astro-pure'
-import { defineConfig } from 'astro/config'
-import rehypeKatex from 'rehype-katex'
-import remarkMath from 'remark-math'
-import { remarkGithubCard } from './src/plugins/remark-github-card.ts'
-import UnoCSS from 'unocss/astro'
-
-// Others
-// import { visualizer } from 'rollup-plugin-visualizer'
+import { rehypeHeadingIds } from '@astrojs/markdown-remark';
+import vercel from '@astrojs/vercel';
+import icon from 'astro-icon';
+import AstroPureIntegration from 'astro-pure';
+import { defineConfig } from 'astro/config';
+import rehypeKatex from 'rehype-katex';
+import remarkMath from 'remark-math';
+import UnoCSS from 'unocss/astro';
 
 // Local integrations
-import { outputCopier } from './src/plugins/output-copier.ts'
+import { outputCopier } from './src/plugins/output-copier.ts';
 // Local rehype & remark plugins
-import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts'
+import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts';
+import { remarkGithubCard } from './src/plugins/remark-github-card.ts';
 // Shiki
-import {
-  addCopyButton,
-  addLanguage,
-  addTitle,
-  transformerNotationDiff,
-  transformerNotationHighlight,
-  updateStyle
-} from './src/plugins/shiki-transformers.ts'
-import config from './src/site.config.ts'
-
-import icon from 'astro-icon';
+import { addCopyButton, addLanguage, addTitle, transformerNotationDiff, transformerNotationHighlight, updateStyle } from './src/plugins/shiki-transformers.ts';
+import config from './src/site.config.ts';
 
 // https://astro.build/config
 export default defineConfig({
@@ -54,19 +43,23 @@ export default defineConfig({
     }
   },
 
-  integrations: [// astro-pure will automatically add sitemap, mdx & tailwind
-  // sitemap(),
-  // mdx(),
-  UnoCSS({ injectReset: true }), AstroPureIntegration(config), // (await import('@playform/compress')).default({
-  //   SVG: false,
-  //   Exclude: ['index.*.js']
-  // }),
+  integrations: [
+    // astro-pure will automatically add sitemap, mdx & tailwind
+    // sitemap(),
+    // mdx(),
+    UnoCSS({ injectReset: true }),
+    AstroPureIntegration(config), // (await import('@playform/compress')).default({
+    //   SVG: false,
+    //   Exclude: ['index.*.js']
+    // }),
 
-  // Temporary fix vercel adapter
-  // static build method is not needed
-  outputCopier({
-    integ: ['sitemap', 'pagefind']
-  }), icon()],
+    // Temporary fix vercel adapter
+    // static build method is not needed
+    outputCopier({
+      integ: ['sitemap', 'pagefind']
+    }),
+    icon()
+  ],
   // root: './my-project-directory',
 
   // Prefetch Options
@@ -77,7 +70,7 @@ export default defineConfig({
   },
   // Markdown Options
   markdown: {
-  remarkPlugins: [remarkMath, remarkGithubCard],
+    remarkPlugins: [remarkMath, remarkGithubCard],
     rehypePlugins: [
       [rehypeKatex, {}],
       rehypeHeadingIds,
@@ -107,15 +100,6 @@ export default defineConfig({
     }
   },
   experimental: {
-    svg: true,
     contentIntellisense: true
-  },
-  vite: {
-    plugins: [
-      //   visualizer({
-      //     emitFile: true,
-      //     filename: 'stats.html'
-      //   })
-    ]
   }
 })

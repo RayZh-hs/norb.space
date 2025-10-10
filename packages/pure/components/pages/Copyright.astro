@@ -2,6 +2,8 @@
 import type { CollectionKey, InferEntrySchema } from 'astro:content'
 import config from 'virtual:config'
 
+import type { iconsType } from '^/types'
+
 import { cn, getFormattedDate } from '../../utils'
 import { QRCode } from '../advanced'
 import { Icon } from '../user'
@@ -12,11 +14,9 @@ interface Props<T extends CollectionKey> {
 }
 
 const {
-  data: { heroImage, title, publishDate },
+  data: { title, publishDate },
   class: className
 } = Astro.props
-
-const image = typeof heroImage?.src === 'string' ? heroImage?.src : (heroImage?.src?.src ?? '')
 
 const shares = {
   x: {
@@ -26,6 +26,12 @@ const shares = {
     link: `https://bsky.app/intent/compose?text=${title}%0A${Astro.url}`
   }
 } as const
+
+type SharePlatform = keyof typeof shares
+
+const availableShares: SharePlatform[] = config.content.share.filter(
+  (share: string): share is SharePlatform => share in shares
+)
 ---
 
 <div
@@ -88,14 +94,14 @@ const shares = {
         <Icon class='size-5' name='qrcode' />
       </button>
       {
-        config.content.share.map((share) => (
+        availableShares.map((share) => (
           <a
             href={shares[share].link}
             target='_blank'
             id={`share-${share}`}
             class='group rounded-full bg-muted p-1 text-muted-foreground transition-colors hover:text-primary sm:p-1.5'
           >
-            <Icon class='size-5' name={share} />
+            <Icon class='size-5' name={share as iconsType} />
           </a>
         ))
       }

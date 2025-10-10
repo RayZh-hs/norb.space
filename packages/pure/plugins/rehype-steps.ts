@@ -1,7 +1,7 @@
 // https://github.com/withastro/starlight/blob/main/packages/starlight/user-components/rehype-steps.ts
 
 import { AstroError } from 'astro/errors'
-import type { Element, Root } from 'hast'
+import type { Content, Element, Root } from 'hast'
 import { rehype } from 'rehype'
 import type { VFile } from 'vfile'
 
@@ -15,7 +15,7 @@ const stepsProcessor = rehype()
 
   .use(function steps() {
     return (tree: Root, vfile: VFile) => {
-      const rootElements = tree.children.filter((item): item is Element => item.type === 'element')
+      const rootElements = tree.children.filter((item: Content): item is Element => item.type === 'element')
 
       const [rootElement] = rootElements
 
@@ -79,7 +79,7 @@ const stepsProcessor = rehype()
  */
 
 export const processSteps = (html: string | undefined) => {
-  const file = stepsProcessor.processSync({ value: html })
+  const file = stepsProcessor.processSync({ value: html ?? '' })
 
   return { html: file.toString() }
 }

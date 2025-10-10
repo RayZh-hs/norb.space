@@ -1,4 +1,5 @@
 import type { Element } from 'hast'
+import type { VFile } from 'vfile'
 import { select } from 'hast-util-select'
 import { rehype } from 'rehype'
 import { CONTINUE, SKIP, visit } from 'unist-util-visit'
@@ -51,10 +52,10 @@ const getIDs = () => {
 const tabsProcessor = rehype()
   .data('settings', { fragment: true })
   .use(function tabs() {
-    return (tree: Element, file) => {
+    return (tree: Element, file: VFile) => {
       file.data.panels = []
       let isFirst = true
-      visit(tree, 'element', (node) => {
+      visit(tree, 'element', (node: Element) => {
         if (node.tagName !== TabItemTagname || !node.properties) {
           return CONTINUE
         }

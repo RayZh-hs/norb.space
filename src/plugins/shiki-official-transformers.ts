@@ -25,8 +25,8 @@ function createCommentNotationTransformer(
 ): ShikiTransformer {
   return {
     name,
-    code(code) {
-      const lines = code.children.filter((i) => i.type === 'element') as Element[]
+    code(code: Element) {
+      const lines = code.children.filter((i): i is Element => i.type === 'element')
       const linesToRemove: (Element | Text)[] = []
       lines.forEach((line, idx) => {
         let nodeToRemove: Element | undefined
@@ -37,12 +37,14 @@ function createCommentNotationTransformer(
           if (text.type !== 'text') continue
 
           let replaced = false
-          text.value = text.value.replace(regex, (...match) => {
+          text.value = text.value.replace(regex, (matched, ...args: Array<string | number>) => {
+            const captures = args.slice(0, Math.max(0, args.length - 2)) as string[]
+            const match = [matched, ...captures]
             if (onMatch.call(this, match, line, child, lines, idx)) {
               replaced = true
               return ''
             }
-            return match[0]
+            return matched
           })
           if (replaced && !text.value.trim()) nodeToRemove = child
         }

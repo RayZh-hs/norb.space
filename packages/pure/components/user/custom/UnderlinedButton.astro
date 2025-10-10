@@ -1,113 +1,96 @@
 ---
-import type { HTMLAttributes } from 'astro/types';
-import { cn } from '../../../utils'; // Assuming this utility exists
-import { Icon } from 'astro-icon/components'; // Assuming path
+import { cn } from '../../../utils'
+import { Icon } from 'astro-icon/components'
 
-// Define the component's props
-// Using a generic type that accepts common attributes plus our custom ones.
-// We let astro:props handle the tag-specific attribute validation.
-interface Props extends HTMLAttributes<'a' | 'button' | 'span' | 'div'> {
-  as?: 'a' | 'button' | 'span' | 'div';
-  class?: string;
-  title?: string; // Keep separate from native title attribute if needed
-  href?: string;
-  buttonStyle?: 'button' | 'pill'; // Renamed from 'style'
-  prependIcon?: string;
-  appendIcon?: string;
-  gap?: string; // e.g., '0.5rem', '8px'
-  // Allow any other props
-  [key: string]: any;
+type ButtonTag = 'a' | 'button' | 'span' | 'div'
+
+interface Props extends Record<string, unknown> {
+  as?: ButtonTag
+  class?: string
+  title?: string
+  href?: string
+  buttonStyle?: 'button' | 'pill'
+  prependIcon?: string
+  appendIcon?: string
+  gap?: string
+  size?: 'sm' | 'md' | 'lg'
+  style?: string | Record<string, string | number>
 }
 
-// Destructure props with defaults
 const {
-  as: Tag = 'a',
+  as = 'a',
   class: className,
   title,
   href,
-  buttonStyle = 'button', // Use the renamed prop
+  buttonStyle = 'button',
   prependIcon,
   appendIcon,
   gap = '0.4rem',
-  style, // Capture the standard style prop separately if passed
-  ...rest // Collect remaining props for astro:props
-} = Astro.props as Props;
+  size = 'md',
+  style,
+  ...rest
+} = Astro.props as Props
 
-const hasPrependIcon = !!prependIcon;
-const hasAppendIcon = !!appendIcon;
-const hasTitle = !!title;
+const Tag = as as ButtonTag
 
-// Combine gap style with any passed-in style string/object
-// Convert the gap style object to a string for broader compatibility
-const gapStyleString = gap ? `gap: ${gap};` : '';
-let combinedStyle = gapStyleString;
-
-// If a style prop was explicitly passed, merge it carefully
-if (style) {
-  if (typeof style === 'string') {
-    combinedStyle += style; // Append if it's a string
-  } else if (typeof style === 'object') {
-    // Convert passed style object to string (basic example)
-    combinedStyle += Object.entries(style)
-      .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`)
-      .join(' ');
-  }
+const sizeClass: Record<NonNullable<Props['size']>, string> = {
+  sm: 'text-sm',
+  md: 'text-base',
+  lg: 'text-lg'
 }
 
-// Filter out props that are handled explicitly or internal to prevent duplicates
-// 'class' is handled by cn, 'style' is combined above, 'as' determines the tag
-// title/prependIcon/appendIcon/gap/buttonStyle are component logic props
-delete rest.as;
-delete rest.class; // Although cn handles it, astro:props might complain if it's still present
-delete rest.title;
-delete rest.buttonStyle;
-delete rest.prependIcon;
-delete rest.appendIcon;
-delete rest.gap;
-delete rest.style; // Ensure the original style prop isn't spread again
+const gapStyle = gap ? `gap:${gap};` : ''
+let inlineStyle = ''
+if (typeof style === 'string') {
+  inlineStyle = style
+} else if (style && typeof style === 'object') {
+  inlineStyle = Object.entries(style)
+    .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}:${value};`)
+    .join(' ')
+}
+const combinedStyle = [gapStyle, inlineStyle].filter(Boolean).join(' ') || undefined
 
+const linkAttributes =
+  Tag === 'a' && href
+    ? ({ href, 'data-astro-prefetch': true } as const)
+    : ({} as const)
+
+const restProps = Object.fromEntries(
+  Object.entries(rest).filter(([key]) => !key.startsWith('astro:'))
+) as Record<string, unknown>
+
+const hasPrependIcon = Boolean(prependIcon)
+const hasAppendIcon = Boolean(appendIcon)
+const hasTitle = Boolean(title)
 ---
 
 <Tag
   class={cn(
-    'group inline-flex items-center align-middle',
-    'underlined-button-mixin',
-    !href && Tag === 'a' ? 'cursor-default' : 'cursor-pointer', // Ensure pointer for buttons etc.
-    buttonStyle === 'pill' && 'rounded-xl',
+    'group inline-flex items-center align-middle underlined-button-mixin',
+    buttonStyle === 'pill' && 'rounded-xl px-3 py-1.5',
+    sizeClass[size],
+    Tag === 'a' && !href ? 'cursor-default' : 'cursor-pointer',
     className
   )}
-  style={combinedStyle || undefined} {/* Apply combined style string */}
-  href={href}
-  {...(Tag === 'a' && href && { 'data-astro-prefetch': true })} {/* Prefetch only for actual links */}
-  astro:props={rest} {/* Use astro:props to spread the remaining attributes safely */}
+  style={combinedStyle}
+  {...linkAttributes}
+  {...restProps}
 >
   <slot>
     {hasPrependIcon && (
-      <Icon
-        name={prependIcon}
-        class={cn('w-4 h-4 flex-shrink-0', 'prepend-icon-mixin')}
-        aria-hidden="true"
-      />
+      <Icon name={prependIcon} class='prepend-icon-mixin h-4 w-4 flex-shrink-0' aria-hidden='true' />
     )}
-    {hasTitle && (
-      <span class="my-0 flex-shrink-0">{title}</span>
-    )}
+    {hasTitle && <span class='my-0 flex-shrink-0'>{title}</span>}
     {hasAppendIcon && (
-      <Icon
-        name={appendIcon}
-        class={cn('w-4 h-4 flex-shrink-0', 'append-icon-mixin')}
-        aria-hidden="true"
-      />
+      <Icon name={appendIcon} class='append-icon-mixin h-4 w-4 flex-shrink-0' aria-hidden='true' />
     )}
   </slot>
 </Tag>
 
 <style>
-  /* Styles remain the same */
   .underlined-button-mixin {
     position: relative;
     padding-bottom: 2px;
-    /* cursor: pointer; <- Moved cursor logic to cn */
     text-decoration: none;
     color: inherit;
   }
@@ -130,7 +113,4 @@ delete rest.style; // Ensure the original style prop isn't spread again
   .underlined-button-mixin:focus::before {
     transform: scaleX(1);
   }
-
-  .prepend-icon-mixin { /* Optional */ }
-  .append-icon-mixin { /* Optional */ }
 </style>
