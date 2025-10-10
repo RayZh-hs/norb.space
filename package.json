@@ -21,6 +21,7 @@
     "@astrojs/check": "^0.9.4",
     "@astrojs/markdown-remark": "^6.3.8",
     "@astrojs/mdx": "^4.3.7",
+    "@astrojs/node": "^9.4.5",
     "@astrojs/rss": "^4.0.12",
     "@astrojs/sitemap": "^3.6.0",
     "@astrojs/vercel": "^8.2.9",
