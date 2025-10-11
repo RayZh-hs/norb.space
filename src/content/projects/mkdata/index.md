@@ -7,6 +7,7 @@ tags:
   - System Tools
 icon: { src: './mkdata.png' }
 gradient: { from: '#90bbf7', to: '#4d5ef7' }
+blogpage: http://norb.space/blog/introducing-mkdata
 homepage: https://github.com/RayZh-hs/mkdata
 demo: null
 ---

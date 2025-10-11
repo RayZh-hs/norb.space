@@ -49,6 +49,7 @@ const projects = defineCollection({
       src: image(), // Use Astro's image helper for the icon source
     }).optional(),
     homepage: z.string().url().optional(), // URL for the project's homepage
+    blogpage: z.string().url().optional(), // URL for a related blog post
     demopage: z.string().url().optional(),
     gradient: z.object({
       from: z.string(),
