@@ -1,105 +1,51 @@
-# Astro Theme Pure
+# Norb's Space
 
-[English](./README.md) | [简体中文](./README-zh-CN.md)
+Welcome to my personal website! This is where I share my thoughts, projects, and creative work.
 
-A simple, fast and powerful blog theme built by Astro.
+## About Me
 
-[![GitHub deployments](https://img.shields.io/github/deployments/cworld1/astro-theme-pure/production?style=flat&logo=vercel&label=vercel)](https://astro-pure.js.org/)
-[![NPM Version](https://img.shields.io/npm/v/astro-pure?logo=npm&style=flat)](https://www.npmjs.com/package/astro-pure)
-[![GitHub Release](https://img.shields.io/github/v/release/cworld1/astro-theme-pure?include_prereleases&style=flat&label=template)](https://github.com/cworld1/astro-theme-pure/releases)
-[![GitHub License](https://img.shields.io/github/license/cworld1/astro-theme-pure?style=flat)](https://github.com/cworld1/astro-theme-pure/blob/main/LICENSE)
+I'm Norb, and this is my digital space where knowledge and ideas flow. Here you'll find my blog posts, projects, and gallery of creative work.
 
-![image](./.github/assets/header.webp)
-![image](./.github/assets/body.webp)
+## Website Features
 
-> [!WARNING]
-> Theme template v4.0.2^ is changing CSS engine to UnoCSS. Stabler experience is currently on [v4.0.1-beta](https://github.com/cworld1/astro-theme-pure/tree/v4.0.1-beta). Known issues:
->
-> 1. UnoCSS adaption (serious)
-> 2. Cannot pack sitemap and pagefind resources on Vercel ([need upstream fix](https://github.com/withastro/astro/issues/12663) & temp fixed)
-> 3. Header & customize options is still under development (template exposed still)
+- 🚀 **Fast & Responsive**: Built with Astro for optimal performance
+- 🔍 **Full-site Search**: Easily find content with the built-in search functionality
+- 📱 **Mobile-friendly**: Responsive design that works on all devices
+- 🎨 **Gallery**: Visual showcase of my creative work
+- 📝 **Blog**: Thoughts, tutorials, and insights
+- 💼 **Projects**: Showcase of my personal and professional projects
 
-## Introduction
+## Sections
 
-Checkout [Demo Site →](https://astro-pure.js.org/)
+- [Blog](/blog) - Articles and thoughts on various topics
+- [Projects](/projects) - My personal and professional projects
+- [Gallery](/gallery) - Visual creative work and photography
+- [About](/about) - More information about me
 
-### :fire: Features
+## Technology Stack
 
-- [x] :rocket: Fast & high performance
-- [x] :star: Simple & clean design
-- [x] :iphone: Responsive design
-- [x] :mag: Full-site search built with [pagefind](https://pagefind.app/)
-- [x] :world_map: Sitemap & RSS feed
-- [x] :spider_web: SEO-friendly
-- [x] :book: TOC (table of contents)
-- [x] :framed_picture: Dynamic open graph generation for posts
-- [x] :framed_picture: Mediumzoom lightbox for images
+This website is built with:
 
-### :package: Components
+- **Astro** - Modern static site generator
+- **TypeScript** - Type-safe JavaScript
 
-Theme includes a lot of components, which can not only be used in the theme, but also in other astro projects.
+## Local Development
 
-> For other astro projects, Tailwind CSS is required.
+If you want to run this website locally:
 
-- Basic components: `Aside`, `Tabs`, `Timeline`, `Steps`, `Spoiler`...
-- Advanced components: `GithubCard`, `LinkPreview`, `Quote`, `QRCode`...
+```bash
+# Install dependencies
+pnpm install
 
-### :white_check_mark: Lighthouse score
+# Start development server
+pnpm dev
 
-[![lighthouse-score](./.github/assets/lighthouse-score.png)](https://pagespeed.web.dev/analysis/https-cworld-top/o229zrt5o4?form_factor=mobile&hl=en)
-
-## Documentation
-
-[Docs](https://astro-pure.js.org/docs) | [Showcase](https://github.com/cworld1/astro-theme-pure/issues/10)
-
-## Package
-
-See [astro-theme-pure](https://www.npmjs.com/package/astro-pure) on npm.
-
-## Local development
-
-Environment requirements:
-
-- [Nodejs](https://nodejs.org/): 18.0.0+
-
-Clone the repository:
-
-```shell
-git clone https://github.com/cworld1/astro-theme-pure.git
-cd astro-theme-pure
+# Build for production
+pnpm build
 ```
-
-Useful commands:
-
-```shell
-# install dependencies
-bun install
-
-# start the dev server
-bun dev
-
-# build the project
-bun run build
-
-# preview (after the build)
-bun preview
-
-# create a new post
-bun new-post
-```
-
-## Contributions
-
-To spend more time coding and less time fiddling with whitespace, this project uses code conventions and styles to encourage consistency. Code with a consistent style is easier (and less error-prone!) to review, maintain, and understand.
-
-## Thanks
-
-- [Astro Cactus](https://github.com/chrismwilliams/astro-theme-cactus)
-- [Astro Resume](https://github.com/srleom/astro-theme-resume)
-- [Starlight](https://github.com/withastro/starlight)
 
 ## License
 
-This project is licensed under the Apache 2.0 License.
+This website is open source and available under the [Apache 2.0 License](./LICENSE).
 
-[![Star History Chart](https://api.star-history.com/svg?repos=cworld1/astro-theme-pure&type=Date)](https://star-history.com/#cworld1/astro-theme-pure&Date)
+The website is built on [Astro Theme Pure](https://github.com/cworld1/astro-theme-pure).
