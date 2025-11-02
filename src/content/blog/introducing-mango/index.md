@@ -9,7 +9,7 @@ heroImage: { src: './thumbnail.jpg', color: '#d8c37fff' }
 language: 'English'
 ---
 
-https://github.com/RayZh-hs/Mango
+https://github.com/Mango-CLI/Mango
 
 Script management has always been vital to productivity in software development. Almost every aspiring developer has in his or her toolkit an arsenal of scripts to automate repetitive tasks, streamline workflows, and boost their everyday work efficiency.
 
@@ -45,4 +45,6 @@ The same is true for **all mango commands**. They are nothing *magic*, just file
 
 Mango is yet another script management system. It is nothing fancy, but it does address the need for a unified and extensible scripting solution, in a simple yet elegant way. It is designed to be easy to use, easy to extend, and easy to integrate into existing workflows. This is why personally, I deem Mango a welcoming addition to my workflow, and I have been using it ever since I finished the project.
 
-Vibrant, simple and sweet as the fruit it is named after. Why not take a bite?
+If you are interested in the Mango project, feel free to check out the [GitHub repository](https://github.com/Mango-CLI/Mango). We welcome contributions, suggestions, and feedback from the community!
+
+Happy scripting!
