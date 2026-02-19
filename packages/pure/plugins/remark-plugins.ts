@@ -13,7 +13,27 @@ export const remarkAddZoomable: Plugin<[{ className?: string }], Root> = functio
   return function (tree: Root) {
     visit(tree, 'image', (node: Image) => {
       node.data ??= {}
-      node.data.hProperties = { class: className }
+      const properties = (node.data.hProperties ?? {}) as Record<string, unknown>
+      const existedClass = properties.class
+      const existedClassName = properties.className
+      const classSet = new Set<string>([className])
+
+      for (const source of [existedClass, existedClassName]) {
+        if (Array.isArray(source)) {
+          for (const item of source) {
+            if (typeof item === 'string' && item.length > 0) classSet.add(item)
+          }
+        } else if (typeof source === 'string' && source.length > 0) {
+          for (const item of source.split(/\s+/)) {
+            if (item) classSet.add(item)
+          }
+        }
+      }
+
+      node.data.hProperties = {
+        ...properties,
+        className: [...classSet]
+      }
     })
   }
 }

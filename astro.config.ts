@@ -14,6 +14,7 @@ import { outputCopier } from './src/plugins/output-copier.ts';
 // Local rehype & remark plugins
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts';
 import { remarkGithubCard } from './src/plugins/remark-github-card.ts';
+import { remarkThemeImages } from './src/plugins/remark-theme-images.ts';
 // Shiki
 import { addCopyButton, addLanguage, addTitle, transformerNotationDiff, transformerNotationHighlight, updateStyle } from './src/plugins/shiki-transformers.ts';
 import config from './src/site.config.ts';
@@ -47,7 +48,10 @@ export default defineConfig({
     // astro-pure will automatically add sitemap, mdx & tailwind
     // sitemap(),
     // mdx(),
-    UnoCSS({ injectReset: true }),
+    UnoCSS({
+      injectReset: true,
+      safelist: ['hidden', 'dark:hidden', 'dark:block', 'dark:inline-block'],
+    }),
     AstroPureIntegration(config), // (await import('@playform/compress')).default({
     //   SVG: false,
     //   Exclude: ['index.*.js']
@@ -70,7 +74,7 @@ export default defineConfig({
   },
   // Markdown Options
   markdown: {
-    remarkPlugins: [remarkMath, remarkGithubCard],
+    remarkPlugins: [remarkMath, remarkThemeImages, remarkGithubCard],
     rehypePlugins: [
       [rehypeKatex, {}],
       rehypeHeadingIds,

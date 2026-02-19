@@ -9,6 +9,7 @@ import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
 import config from 'virtual:config'
+import { remarkThemeImages } from '../plugins/remark-theme-images'
 
 import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
 
@@ -45,6 +46,7 @@ const renderContent = async (post: CollectionEntry<'blog'>, site: URL) => {
 
   const file = await unified()
     .use(remarkParse)
+    .use(remarkThemeImages)
     .use(remarkReplaceImageLink)
     .use(remarkRehype)
     .use(rehypeStringify)

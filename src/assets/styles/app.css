@@ -71,6 +71,19 @@ html.dark {
   color-scheme: dark;
 }
 
+/* Theme-aware markdown images */
+img[data-theme-image='dark'] {
+  display: none;
+}
+
+.dark img[data-theme-image='dark'] {
+  display: block;
+}
+
+.dark img[data-theme-image='light'] {
+  display: none;
+}
+
 /* Global */
 a {
   transition: color 0.2s ease;
