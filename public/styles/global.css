@@ -249,3 +249,13 @@ body::-webkit-scrollbar {
 .gh-card-body { display: grid; gap: 0.25rem; }
 .gh-card-title { font-weight: 600; line-height: 1.2; text-decoration: none; }
 .gh-card-desc { color: hsl(var(--muted-foreground)); font-size: .95rem; font-weight: 400; }
+
+/* Markdown image captions: {{ caption text }} */
+p.image-caption {
+  margin-top: -0.25rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+  font-size: 0.925rem;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground) / 0.85);
+}

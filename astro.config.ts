@@ -14,6 +14,7 @@ import { outputCopier } from './src/plugins/output-copier.ts';
 // Local rehype & remark plugins
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts';
 import { remarkGithubCard } from './src/plugins/remark-github-card.ts';
+import { remarkImageCaption } from './src/plugins/remark-image-caption.ts';
 import { remarkThemeImages } from './src/plugins/remark-theme-images.ts';
 // Shiki
 import { addCopyButton, addLanguage, addTitle, transformerNotationDiff, transformerNotationHighlight, updateStyle } from './src/plugins/shiki-transformers.ts';
@@ -74,7 +75,7 @@ export default defineConfig({
   },
   // Markdown Options
   markdown: {
-    remarkPlugins: [remarkMath, remarkThemeImages, remarkGithubCard],
+    remarkPlugins: [remarkMath, remarkThemeImages, remarkGithubCard, remarkImageCaption],
     rehypePlugins: [
       [rehypeKatex, {}],
       rehypeHeadingIds,
