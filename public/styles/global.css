@@ -250,6 +250,59 @@ body::-webkit-scrollbar {
 .gh-card-title { font-weight: 600; line-height: 1.2; text-decoration: none; }
 .gh-card-desc { color: hsl(var(--muted-foreground)); font-size: .95rem; font-weight: 400; }
 
+/* Markdown attachment card: [Label](./file.ext "attachment") */
+p.md-attachment-line {
+  margin-block: 1rem;
+}
+p.md-attachment-line > a.md-attachment-card {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-radius: 0.75rem;
+  background: hsl(var(--card) / var(--un-bg-opacity, 1));
+  color: inherit;
+  text-decoration: none !important;
+  transition: box-shadow .2s ease, transform .15s ease;
+}
+p.md-attachment-line > a.md-attachment-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+}
+.dark p.md-attachment-line > a.md-attachment-card {
+  border-color: hsl(var(--border) / 0.4);
+}
+p.md-attachment-line > a.md-attachment-card::before {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border-radius: 0.5rem;
+  background: hsl(var(--muted) / 0.4);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3Cpath d='M12 15V3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 22px 22px;
+}
+p.md-attachment-line > a.md-attachment-card::after {
+  content: 'Download';
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+p.md-attachment-line > a.md-attachment-card .md-attachment-name {
+  font-weight: 600;
+  line-height: 1.2;
+}
+p.md-attachment-line > a.md-attachment-card .md-attachment-size {
+  margin-inline-start: 0.5rem;
+  font-size: 0.9rem;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+
 /* Markdown image captions: {{ caption text }} */
 p.image-caption {
   margin-top: -0.25rem;

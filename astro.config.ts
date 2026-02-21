@@ -13,6 +13,7 @@ import UnoCSS from 'unocss/astro';
 import { outputCopier } from './src/plugins/output-copier.ts';
 // Local rehype & remark plugins
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts';
+import { remarkAttachment } from './src/plugins/remark-attachment.ts';
 import { remarkGithubCard } from './src/plugins/remark-github-card.ts';
 import { remarkImageCaption } from './src/plugins/remark-image-caption.ts';
 import { remarkThemeImages } from './src/plugins/remark-theme-images.ts';
@@ -75,7 +76,7 @@ export default defineConfig({
   },
   // Markdown Options
   markdown: {
-    remarkPlugins: [remarkMath, remarkThemeImages, remarkGithubCard, remarkImageCaption],
+    remarkPlugins: [remarkMath, remarkThemeImages, remarkAttachment, remarkGithubCard, remarkImageCaption],
     rehypePlugins: [
       [rehypeKatex, {}],
       rehypeHeadingIds,

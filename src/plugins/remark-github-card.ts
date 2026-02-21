@@ -40,6 +40,7 @@ async function fetchRepo(owner: string, repo: string): Promise<RepoInfo | null> 
 
 const GH_REPO_RE =
   /^(?:https?:\/\/)?(?:www\.)?github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:\/?|#.*)?$/
+const ATTACHMENT_TITLE_RE = /^(attachment|attach|download)$/i
 
 // Remark plugin: turn paragraphs that contain a single GitHub repo link
 // into a rich card block with icon, title, description, and clickable link
@@ -55,6 +56,7 @@ export const remarkGithubCard: RemarkPlugin = function () {
         const children: Content[] = node.children || []
         if (children.length !== 1 || children[0].type !== 'link') return
         const link = children[0] as Link
+        if (link.title && ATTACHMENT_TITLE_RE.test(link.title.trim())) return
         const url: string = link.url || ''
         const m = url.match(GH_REPO_RE)
         if (!m) return
