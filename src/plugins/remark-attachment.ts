@@ -1,3 +1,4 @@
+import type { ElementContent } from 'hast'
 import type { Link, Paragraph, Root } from 'mdast'
 import type { Plugin } from 'unified'
 import { visit } from 'unist-util-visit'
@@ -96,25 +97,26 @@ export const remarkAttachment: Plugin<[], Root> = function () {
         .trim()
 
       if (label) {
-        link.data ??= {}
-        link.data.hChildren = [
+        const hChildren: ElementContent[] = [
           {
             type: 'element',
             tagName: 'span',
             properties: { className: ['md-attachment-name'] },
             children: [{ type: 'text', value: label }]
-          },
-          ...(size
-            ? [
-                {
-                  type: 'element',
-                  tagName: 'span',
-                  properties: { className: ['md-attachment-size'] },
-                  children: [{ type: 'text', value: size }]
-                }
-              ]
-            : [])
+          }
         ]
+
+        if (size) {
+          hChildren.push({
+            type: 'element',
+            tagName: 'span',
+            properties: { className: ['md-attachment-size'] },
+            children: [{ type: 'text', value: size }]
+          })
+        }
+
+        link.data ??= {}
+        link.data.hChildren = hChildren
       }
 
       node.data ??= {}
