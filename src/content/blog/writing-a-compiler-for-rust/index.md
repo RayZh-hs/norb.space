@@ -37,7 +37,7 @@ source -> preprocess -> lex -> parse -> semantic -> LLVM-like IR -> optimize -> 
 
 ## Tricks for the Lexer
 
-Textbooks often suggest using a list of regular expressions to recognize the next token. This is powerful, but it also hides a surprising amount of cost. Badly worded regex expresses easily throws the lexer into exponential time complexity. Many times, we can develop more targeted and faster methods by looking at the actual language grammar.
+Textbooks often suggest using a list of regular expressions to recognize the next token. This is powerful, but it also hides a surprising amount of cost. Badly worded regex expressions easily throws the lexer into exponential time complexity. In most cases, we can develop more targeted and faster methods by looking at the actual language grammar.
 
 After reading the Rx syntax, I found a simple rule: the type of the next token can usually be determined by looking at the first character, with only a few extra checks.
 
