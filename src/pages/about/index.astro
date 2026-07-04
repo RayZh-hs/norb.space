@@ -5,6 +5,8 @@ import PageLayout from '@/layouts/CommonPage.astro'
 import AccountCard from '@/components/about/AccountCard.astro'
 import ToolSection from '@/components/about/ToolSection.astro'
 
+import voxLogo from '/src/content/projects/vox/logo.png'
+
 const headings = [
   { depth: 2, slug: 'hobbies', text: 'Hobbies' },
   { depth: 2, slug: 'lang', text: 'Programming Languages' },
@@ -100,10 +102,31 @@ const headings = [
         icon: import('@/assets/tools/golang.svg?raw')
       },
       {
+        name: 'Rust',
+        description: 'Systems Programming',
+        href: 'https://www.rust-lang.org/',
+        icon: {
+          light: import('@/assets/tools/rust.svg?raw'),
+          dark: import('@/assets/tools/rust-dark.svg?raw')
+        }
+      },
+      {
+        name: 'Scala',
+        description: 'Hardware Design with Chisel',
+        href: 'https://www.scala-lang.org/',
+        icon: import('@/assets/tools/scala.svg?raw')
+      },
+      {
         name: 'Kotlin',
         description: 'Software Development',
         href: 'https://kotlinlang.org/',
         icon: import('@/assets/tools/kotlin.svg?raw')
+      },
+      {
+        name: 'Vox',
+        description: 'High-performance Scripting',
+        href: 'https://github.com/rayzh-hs/Vox',
+        icon: voxLogo
       }
     ]}
   />
@@ -205,16 +228,10 @@ const headings = [
         icon: import('@/assets/tools/jetbrains.svg?raw')
       },
       {
-        name: 'Termius',
-        description: 'Remote Development',
-        href: 'https://www.termius.com/',
-        icon: import('@/assets/tools/termius.svg?raw')
-      },
-      {
-        name: 'Helix',
+        name: 'Neovim',
         description: 'Terminal Text Editor',
-        href: 'https://helix-editor.com/',
-        icon: import('@/assets/tools/helix.svg?raw')
+        href: 'https://neovim.io/',
+        icon: import('@/assets/tools/neovim.svg?raw')
       }
     ]}
   />
@@ -223,16 +240,10 @@ const headings = [
     title='Environment'
     tools={[
       {
-        name: 'Ubuntu 24.04 LTS',
-        description: 'Development Machine',
-        href: 'https://ubuntu.com/',
-        icon: import('@/assets/tools/ubuntu.svg?raw')
-      },
-      {
-        name: 'Windows 11',
-        description: 'Personal Machine',
-        href: 'https://news.microsoft.com/windows11-general-availability/',
-        icon: import('@/assets/tools/windows11.svg?raw')
+        name: 'Arch Linux',
+        description: 'Current Machine',
+        href: 'https://archlinux.org/',
+        icon: import('@/assets/tools/archlinux.svg?raw')
       }
     ]}
   />
@@ -259,7 +270,9 @@ const headings = [
   <p>
     The website is generated from template
     <a href='https://github.com/cworld1/astro-theme-pure' target='_blank'>Astro Theme Pure</a>
-    , and is re-developed by me and my friend <a href='https://theunknownth.ing' target='_blank'>TheUnknownThing</a>.
+    , and is re-developed by me and my friend <a href='https://theunknownth.ing' target='_blank'
+      >TheUnknownThing</a
+    >.
   </p>
   <Timeline
     events={[
@@ -270,8 +283,7 @@ const headings = [
       },
       {
         date: '2025-08-30',
-        content:
-          'First blog created and deployed locally.'
+        content: 'First blog created and deployed locally.'
       },
       {
         date: '2025-09-10',

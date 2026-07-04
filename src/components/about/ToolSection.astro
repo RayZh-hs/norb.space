@@ -1,19 +1,23 @@
 ---
+import type { ImageMetadata } from 'astro'
+import { Image } from 'astro:assets'
+
 import { Svg } from 'astro-pure/user'
 import { cn } from 'astro-pure/utils'
 
-type IconImport = Promise<typeof import('*.svg?raw')>
+type SvgIconImport = Promise<typeof import('*.svg?raw')>
+type IconSource = SvgIconImport | ImageMetadata
 
 interface IconVariants {
-  light: IconImport
-  dark: IconImport
+  light: IconSource
+  dark: IconSource
 }
 
 interface ToolItem {
   name: string
   description: string
   href: string
-  icon: IconImport | IconVariants
+  icon: IconSource | IconVariants
 }
 
 interface Props {
@@ -26,6 +30,8 @@ const { class: className, title, tools, ...props } = Astro.props
 
 const isVariantIcon = (icon: ToolItem['icon']): icon is IconVariants =>
   typeof icon === 'object' && icon !== null && 'light' in icon && 'dark' in icon
+const isSvgIcon = (icon: IconSource): icon is SvgIconImport =>
+  typeof icon === 'object' && icon !== null && 'then' in icon
 const iconBaseClass = 'size-10 shrink-0 rounded-lg bg-primary-foreground p-2'
 ---
 
@@ -44,24 +50,53 @@ const iconBaseClass = 'size-10 shrink-0 rounded-lg bg-primary-foreground p-2'
           target='_blank'
         >
           <div class='flex items-center gap-x-3 rounded-lg border border-transparent px-1.5 py-1 transition-colors hover:border-border hover:bg-muted'>
-            {
-              isVariantIcon(tool.icon) ? (
-                <>
+            {isVariantIcon(tool.icon) ? (
+              <>
+                {isSvgIcon(tool.icon.light) ? (
                   <Svg
                     src={tool.icon.light}
                     class={cn(iconBaseClass, 'dark:hidden')}
                     aria-hidden='true'
                   />
+                ) : (
+                  <Image
+                    src={tool.icon.light}
+                    alt=''
+                    width={40}
+                    height={40}
+                    class={cn(iconBaseClass, 'object-contain dark:hidden')}
+                    aria-hidden='true'
+                  />
+                )}
+                {isSvgIcon(tool.icon.dark) ? (
                   <Svg
                     src={tool.icon.dark}
                     class={cn(iconBaseClass, 'hidden dark:block')}
                     aria-hidden='true'
                   />
-                </>
-              ) : (
-                <Svg src={tool.icon} class={iconBaseClass} aria-hidden='true' />
-              )
-            }
+                ) : (
+                  <Image
+                    src={tool.icon.dark}
+                    alt=''
+                    width={40}
+                    height={40}
+                    class={cn(iconBaseClass, 'hidden object-contain dark:block')}
+                    aria-hidden='true'
+                  />
+                )}
+              </>
+            ) : isSvgIcon(tool.icon) ? (
+              <Svg src={tool.icon} class={iconBaseClass} aria-hidden='true' />
+            ) : (
+              <Image
+                src={tool.icon}
+                alt=''
+                width={40}
+                height={40}
+                class={cn(iconBaseClass, 'object-contain')}
+                aria-hidden='true'
+              />
+            )}
             <div class='z-20 flex flex-col'>
               <div class='font-medium text-foreground'>{tool.name}</div>
               <div class='font-normal'>{tool.description}</div>
