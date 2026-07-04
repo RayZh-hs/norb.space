@@ -68,13 +68,13 @@ Rx is different. Constants can be used before their textual definition. Function
 
 I eventually settled on a five-pass semantic pipeline:
 
-### Pass 1: Collect Item Names
+### Item Name Collection
 
 The first pass builds the scope tree and records top-level item names. At this point, many symbols are only shells. A struct symbol knows that a struct exists and has certain field names, but the field types may still be unresolved. A function symbol knows that a function exists and has a signature slot, but some parameter and return types may not be filled in yet.
 
 This pass also creates child scopes for crates, function parameter lists, function bodies, blocks, traits, `impl` blocks, and loops. That sounds like housekeeping, but it is one of the most important design choices in Rusty. Once scopes are explicit, every later pass can walk the same tree and ask a clear question: "What does this identifier mean from here?"
 
-### Pass 2: Inject `impl` Items
+### `impl` Injection
 
 Rust syntax lets you write methods away from the type definition:
 
@@ -95,13 +95,13 @@ For later phases, it is much more convenient if `Point` directly knows its assoc
 
 Trait impls add another layer. Rusty checks that implemented functions and constants match the trait header-level requirements: no extra names, no missing names, matching method receiver kind, and matching arity. This is still far from a complete Rust trait solver, but it is enough to make the subset coherent and to keep method lookup from degenerating into ad hoc searches later.
 
-### Pass 3: Resolve Item Types
+### Item Type Resolution
 
 After names and associated items are available, Rusty resolves item-level types. Struct fields get concrete semantic types. Function parameter and return types are resolved. Constants get their declared types and can be evaluated through the static resolver. The `main` function receives a special return treatment because the language and judge expectations treat it more like an exit point than an ordinary value-returning function.
 
 The key tradeoff here is patience. It is tempting to resolve expression bodies as soon as you see a function, but doing so too early creates problems for out-of-order definitions. By resolving item headers first, Rusty makes all callable and nameable things visible before checking executable code.
 
-### Pass 4: Declare Function Parameters
+### Function Parameter Declaration
 
 Function parameters are not just strings in a signature. They are variables inside the function body scope. This is especially important for destructuring patterns and for `self`.
 
@@ -109,7 +109,7 @@ Rusty has a dedicated pass that enters each function's definition scope and decl
 
 Separating this from item type resolution may look verbose, but it keeps the model clean. A function signature belongs to the containing scope; its parameter variables belong to the function's inner scope. Treating those as different facts avoids many small bugs in lookup and shadowing.
 
-### Pass 5: Trace Function Bodies
+### Function Bodies Tracing
 
 The final semantic pass walks executable code. This is where most of the "Rust-like" complexity appears.
 
@@ -159,7 +159,7 @@ This matters because the compiler often needs only one of the three. During fiel
 
 ## Generating IR
 
-Rusty uses a vendored [Kotlin LLVM-like IR library](https://github.com/RayZh-hs/LLVM), which I wrote as well. It is strange that the only Kotlin-native LLVM library is old and does not support modern LLVM features. The IR constructor performs several ordered steps:
+Rusty uses a [Kotlin LLVM-like IR library](https://github.com/RayZh-hs/LLVM), which I wrote during this course. It is strange that the only Kotlin-native LLVM library is old and does not support modern LLVM features. Perhaps Kotlin is simply suit best suited for infrastructure work like this due to a relatively heavy overhead. The IR constructor performs several ordered steps:
 
 1. Register the prelude and runtime-facing functions.
 2. Register struct layouts.
@@ -181,7 +181,7 @@ Optimizations mainly take the form of IR transformations. Rusty performs 20 IR t
 
 1. SizeInliningPass
 2. FunctionInliningPass (threshold 40)
-3. SmallMemcopyLoweringPass
+3. SmallMemcpyLoweringPass
 4. InstCombineCleanupPass
 5. PointerSlotForwardingPass
 6. ScalarReplacementOfAggregatesPass
@@ -202,7 +202,7 @@ Optimizations mainly take the form of IR transformations. Rusty performs 20 IR t
 
 I will not go into the details of each pass, but I will pick two that I think worth special mention.
 
-### SmallMemcopyLoweringPass
+### Small Memcpy Lowering Pass
 
 ```llvm
 ; before  (copy 8 bytes, repeat count 1)
@@ -233,7 +233,7 @@ This is definitely the most important optimization pass in Rusty. It is a classi
 
 The nice thing about writing a rust-like language is that we can make a lot of assumptions about the LLVM IR we generate. In practice, most of the escape analysis is trivially done in the IR generator, and passed down in the form of attributes. This saved me a lot of time: Recovering this from LLVM IR is non-trivial.
 
-### A failed attempt: Jump Lowering
+### A failed attempt: Jump Lowering Pass
 
 ```llvm
 ; before
