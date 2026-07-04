@@ -62,14 +62,29 @@ const cardBaseStyles = `
           aria-controls={dialogId}
           aria-label={`View details for ${projectName}`}
         >
-          <Image
-            src={icon.src}
-            alt={`Icon for ${projectName}`}
-            widths={[200, 400, 600]}
-            sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
-            loading='lazy'
-            class='w-full h-full object-contain p-6 transition-transform duration-300 group-hover:scale-105 dark:brightness-110'
-          />
+          <div class='w-full h-full' style={`transform: scale(${icon.scale});`}>
+            <Image
+              src={icon.src}
+              alt={`Icon for ${projectName}`}
+              widths={[200, 400, 600]}
+              sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
+              loading='lazy'
+              class:list={[
+                'w-full h-full object-contain p-6 transition-transform duration-300 group-hover:scale-105 dark:brightness-110',
+                icon.dark && 'dark:hidden'
+              ]}
+            />
+            {icon.dark && (
+              <Image
+                src={icon.dark}
+                alt={`Icon for ${projectName}`}
+                widths={[200, 400, 600]}
+                sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
+                loading='lazy'
+                class='hidden dark:block w-full h-full object-contain p-6 transition-transform duration-300 group-hover:scale-105'
+              />
+            )}
+          </div>
         </button>
       )
     }

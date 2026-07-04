@@ -47,6 +47,8 @@ const projects = defineCollection({
     tags: z.array(z.string()).optional(),
     icon: z.object({
       src: image(), // Use Astro's image helper for the icon source
+      dark: image().optional(), // Optional dark-mode variant; falls back to `src`
+      scale: z.number().default(1), // Relative icon size, default 1
     }).optional(),
     homepage: z.string().url().optional(), // URL for the project's homepage
     blogpage: z.string().url().optional(), // URL for a related blog post
