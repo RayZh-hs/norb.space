@@ -7,6 +7,7 @@ tags:
   - Technology
 heroImage: { src: './thumbnail.jpg', color: '#d8c37fff' }
 language: 'English'
+project: 'mango'
 ---
 
 https://github.com/Mango-CLI/Mango

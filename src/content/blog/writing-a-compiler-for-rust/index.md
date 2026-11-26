@@ -6,6 +6,7 @@ tags:
   - Compilers
 heroImage: { src: './thumbnail.jpg', color: '#d68335' }
 language: 'English'
+project: 'rusty'
 ---
 
 [Rusty](https://github.com/RayZh-hs/rusty)

@@ -8,6 +8,7 @@ tags:
   - Theme
 heroImage: { src: './thumbnail.jpg', color: '#81a1c1' }
 language: 'English'
+project: 'simply-nord'
 ---
 
 Two weeks ago I decided to make the switch from Windows to Arch Linux. When selecting a desktop environment, I found myself choosing between KDE Plasma and GNOME. Having used GNOME before, I decided to give KDE Plasma a try, since I have heard that it is highly customizable.

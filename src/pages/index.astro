@@ -1,620 +1,1057 @@
 ---
-// src/pages/index.astro
-import { UButton } from '^/components/user/custom' // Assuming UButton is your custom styled button
-import { PostPreview } from '^/components/user/custom'
-import { Icon } from 'astro-icon/components'
-
-import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
 import PageLayout from '@/layouts/BaseLayout.astro'
-// import config from '@/site-config'
-import { author, description, longDescription, projects, hobbies, /*emailAddress,*/ socials } from '@/pages/contents.config'
+import { emailAddress, socials } from '@/pages/contents.config'
 
-// --- Blog Post Fetching ---
-const MAX_POSTS = 3
-let allPostsByDate;
-try {
-  const allPosts = await getBlogCollection()
-  allPostsByDate = sortMDByDate(allPosts).slice(0, MAX_POSTS)
-} catch (error) {
-  console.error('Error fetching blog posts:', error)
-  // Optionally handle the error, e.g., show a message or hide the section
+const meta = {
+  title: 'Home',
+  description: 'Call me Norb — An aspiring student developer working on LLM Agentic and Computer Vision.'
 }
 
-// --- Content ---
-// Keep links concise or use variables if they become complex
-const aboutPageLink = '/about'
-const projectsPageLink = '/projects'
-const blogPageLink = '/blog'
+interface BioChapter {
+  id: string
+  index: string
+  word: string
+  prefixMode: 'i-am-a' | 'none'
+  invert?: boolean
+  tag: string
+  bodyHtml: string
+}
+
+const bioChapters: BioChapter[] = [
+  {
+    id: 'student-developer',
+    index: '01',
+    word: 'Student Developer',
+    prefixMode: 'i-am-a',
+    tag: 'SJTU · ACM Class',
+    bodyHtml:
+      'I major in Computer Science in SJTU ACM class, and I am passionate about software engineering. My github account is <a href="https://github.com/RayZh-hs" target="_blank" rel="noopener noreferrer" class="bio-inline-link">RayZh-hs</a> and on it I have contributed to many open-source projects.'
+  },
+  {
+    id: 'frontier-researcher',
+    index: '02',
+    word: 'Frontier Researcher',
+    prefixMode: 'i-am-a',
+    tag: 'GAIR Lab · AI Research',
+    bodyHtml:
+      'I currently work on LLM Agentic and Computer Vision at Gair Lab, where I push the frontiers of AI research. You will find many <a href="/blog" class="bio-inline-link">blogs</a> on this site that discuss my research and development work.'
+  },
+  {
+    id: 'creative-designer',
+    index: '03',
+    word: 'Creative Designer',
+    prefixMode: 'i-am-a',
+    tag: '3D Modeling · CG Art',
+    bodyHtml:
+      'I am an amateur CG artist, and have many years of experience in 3D modeling and set-dressing. It is the love of CG art that first led me to seek deeper in Computer Vision and Graphics research, and this passion has been the driving force behind my academic pursuits.'
+  },
+  {
+    id: 'photographer',
+    index: '04',
+    word: 'Photographer',
+    prefixMode: 'i-am-a',
+    tag: 'Light · Travel Frames',
+    bodyHtml:
+      'I have a keen interest in photography, capturing moments and scenes during my travels. Some of these photos can be found in <a href="/projects?category=Creative" class="bio-inline-link">creative projects</a> on this site.'
+  },
+  {
+    id: 'botanist',
+    index: '05',
+    word: 'Botanist',
+    prefixMode: 'i-am-a',
+    tag: 'Flora · Field Excursions',
+    bodyHtml:
+      'I have a deep love for plants and nature. I care for many plants and frequently go on excursions to explore the natural world.'
+  },
+  {
+    id: 'who-i-am',
+    index: '06',
+    word: 'Who I am',
+    prefixMode: 'none',
+    invert: true,
+    tag: 'Synthesis · Many Facets',
+    bodyHtml:
+      'Like all of us, I am a complex individual with many facets. I continue to explore and grow and I am excited to share my journey with you through this website.'
+  }
+]
+
+const extraLinks = [
+  { name: 'Email', label: emailAddress, url: `mailto:${emailAddress}` },
+  { name: 'GitHub', label: '@RayZh-hs', url: 'https://github.com/RayZh-hs' },
+  {
+    name: 'WeChat',
+    label: 'Connect',
+    url: socials.find((s) => s.name === 'WeChat')?.url ?? 'https://u.wechat.com/MOTpBKnK_SnffegtAi6mILY'
+  },
+  { name: 'Sketchfab', label: '3D Archive', url: 'https://sketchfab.com/horizon_studios' },
+  { name: 'Pexels', label: 'Photography', url: 'https://www.pexels.com/@ray-zhang-2155334924/gallery/' }
+]
+
+const chapterNav = [
+  { idx: 0, label: 'Intro' },
+  { idx: 1, label: 'Developer' },
+  { idx: 2, label: 'Researcher' },
+  { idx: 3, label: 'Designer' },
+  { idx: 4, label: 'Photographer' },
+  { idx: 5, label: 'Botanist' },
+  { idx: 6, label: 'Who I am' },
+  { idx: 7, label: 'Norb' }
+]
 ---
 
-<PageLayout meta={{ title: 'Home' }} highlightColor='#5e81ac'>
-  {/* Hero Section */}
-  <section
-    class='hero-section relative flex min-h-screen flex-col justify-center overflow-hidden text-left'
-  >
-    {/* Container to control width and padding */}
-    <div class='container mx-auto max-w-5xl px-6'>
-      {/* Text container for GSAP targeting & positioning */}
-      {/* Adjusted translate for better vertical centering feel */}
-      <div class='text-container z-10' style='transform: translateY(-10vh);'>
-        {/* REMOVED fade-in-up, opacity-0, animation-delay. ADDED id */}
-        <h1
-          id="hero-greeting"
-          class='text-4xl font-extralight text-slate-700 dark:text-slate-300 md:text-5xl'
-        >
-          Hello, I'm
-        </h1>
-        {/* REMOVED fade-in-up, opacity-0, animation-delay. ADDED id */}
-        <h2
-          id="hero-name"
-          class='mt-1 text-6xl font-medium text-slate-900 dark:text-white md:text-7xl lg:text-8xl'
-          style='font-family: "Ubuntu", sans-serif; letter-spacing: -0.02em;'
-        >
-          {author}.
-        </h2>
-        {/* REMOVED fade-in-up, opacity-0, animation-delay. ADDED id */}
-        <p
-          id="hero-tagline"
-          class='mt-4 max-w-xl text-lg text-slate-600 dark:text-slate-400 md:text-xl'
-        >
-          <!-- A student developer exploring the web, crafting digital experiences,and occasionally building computers in Minecraft. -->
-          {description}
-        </p>
-      </div>
-    </div>
-
-    {/* Scroll down indicator - Keep CSS animation */}
-    <div
-      class='absolute bottom-8 left-1/2 z-10 -translate-x-1/2 transform opacity-0 fade-in-up animate-bounce'
-      style='animation-delay: 2.5s;'
-    >
-      <svg
-        class='h-7 w-7 text-slate-500 dark:text-slate-400'
-        fill='none'
-        stroke='currentColor'
-        viewBox='0 0 24 24'
-        xmlns='http://www.w3.org/2000/svg'
-        ><path
+<PageLayout
+  {meta}
+  fullBleed={true}
+  floatingHeader={true}
+  hideFooter={true}
+  enableCursor={true}
+>
+  {/* Minimalistic Circle Loading Overlay */}
+  <div id='norb-loader' class='norb-loader' aria-hidden='true'>
+    <div id='loader-circle-wrap' class='loader-circle-wrap'>
+      <svg id='loader-svg' viewBox='0 0 100 100' class='loader-svg'>
+        <circle
+          id='loader-track'
+          cx='50'
+          cy='50'
+          r='38'
+          fill='none'
+          stroke='currentColor'
+          stroke-width='2'
+          opacity='0.12'
+        ></circle>
+        <circle
+          id='loader-arc'
+          cx='50'
+          cy='50'
+          r='38'
+          fill='none'
+          stroke='currentColor'
+          stroke-width='3.2'
           stroke-linecap='round'
-          stroke-linejoin='round'
-          stroke-width='1.5'
-          d='M19 14l-7 7m0 0l-7-7m7 7V3'></path></svg
-      >
+          transform='rotate(90 50 50)'
+        ></circle>
+      </svg>
     </div>
-  </section>
-
-  {/* Content Sections Container */}
-  <div class='content-container relative z-0 overflow-x-hidden bg-white dark:bg-gray-950'>
-     {/* 1. About Me Section */}
-    <section id='about-section' class='parallax-section py-24 md:py-32'>
-      <div class='container mx-auto max-w-3xl px-6 text-center'>
-        <h2 class='section-title mb-6 text-3xl font-semibold md:text-4xl'>About Me</h2>
-        <p class='section-content mb-10 text-lg text-slate-700 dark:text-slate-300 md:text-xl'>
-          {longDescription}
-        </p>
-        <UButton
-          href={aboutPageLink}
-          title='Learn More'
-          size='lg'
-          class='underlined-button astro-pure-button'
-          appendIcon='carbon:arrow-right'
-        />
-      </div>
-    </section>
-
-    {/* 2. Projects Section */}
-    <section
-    id='projects-section'
-    class='parallax-section bg-slate-50 py-24 dark:bg-gray-900 dark:bg-opacity-40 md:py-32'
-  >
-    <div class='container mx-auto max-w-6xl px-6'>
-      <h2 class='section-title mb-16 text-center text-3xl font-semibold md:text-4xl'>
-        Featured Projects
-      </h2>
-      <div class='grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3'>
-        {
-          projects.map((project, index) => (
-            <a href={project.link} target="_blank" rel="noopener noreferrer">
-              <div
-                class='project-card group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:hover:border-slate-600 dark:hover:bg-slate-800'
-                style={`--card-delay: ${index * 0.1}s;`}
-              >
-                {/* --- IMAGE CONTAINER --- */}
-                <div
-                  class:list={[
-                    'relative mb-4 h-48 w-full', // Base styles
-                    'bg-gradient-to-br from-white to-gray-100 dark:from-slate-700 dark:to-slate-800', // Background
-                    // Conditional styles for logo treatment
-                    project.imageIsLogo && 'flex items-center justify-center p-6 md:p-8', // Add padding and flex centering for logos
-                  ]}
-                >
-                  {project.imageUrl ? (
-                    <img
-                      src={project.imageUrl}
-                      alt={`${project.title} logo`}
-                      class:list={[
-                        'transition-transform duration-300', // Base transition
-                        // Conditional styles for image rendering
-                        project.imageIsLogo
-                          ? 'object-contain max-h-[85%] max-w-[85%]' // Logo: Contain within padded area, don't scale on hover
-                          : 'h-full w-full object-cover group-hover:scale-105', // Default: Cover container, scale on hover
-                      ]}
-                      loading='lazy'
-                    />
-                  ) : (
-                    // Placeholder
-                    <div class='flex h-full items-center justify-center'>
-                      <svg
-                        class='h-12 w-12 text-slate-400 dark:text-slate-500'
-                        fill='none'
-                        viewBox='0 0 24 24'
-                        stroke='currentColor'
-                      >
-                        <path
-                          stroke-linecap='round'
-                          stroke-linejoin='round'
-                          stroke-width='1'
-                          d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'
-                        />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div class='p-6 pt-0'>
-                  <h3 class='mb-2 text-xl font-medium'>{project.title}</h3>
-                  <p class='text-sm text-slate-600 dark:text-slate-400'>{project.description}</p>
-                </div>
-              </div>
-            </a>
-          ))
-        }
-      </div>
-      <div class='mt-16 text-center'>
-        <UButton
-          href={projectsPageLink}
-          title='View All Projects'
-          size='lg'
-          class='underlined-button astro-pure-button'
-          appendIcon='carbon:arrow-right'
-        />
-      </div>
-    </div>
-  </section>
-
-    {/* 3. Hobbies Section */}
-    <section id='hobbies-section' class='parallax-section py-24 md:py-32'>
-      <div class='container mx-auto max-w-4xl px-6'>
-        <h2 class='section-title mb-16 text-center text-3xl font-semibold md:text-4xl'>
-          Beyond the Code
-        </h2>
-        <ul class='space-y-10'>
-          {
-            hobbies.map((hobby) => (
-              <li class='hobby-item flex flex-col items-start gap-4 md:flex-row md:items-center'>
-                <span class='text-4xl md:text-5xl'>{hobby.icon}</span>
-                <div class='flex-grow'>
-                  <h3 class='mb-1 text-xl font-medium'>{hobby.title}</h3>
-                  <p class='text-slate-700 dark:text-slate-300'>{hobby.description}</p>
-                  {hobby.link && hobby.linkText && (
-                    <a
-                      href={hobby.link}
-                      class='mt-2 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400'
-                      target={hobby.link.startsWith('http') ? '_blank' : '_self'}
-                      rel={hobby.link.startsWith('http') ? 'noopener noreferrer' : ''}
-                    >
-                      {hobby.linkText} →
-                    </a>
-                  )}
-                </div>
-              </li>
-            ))
-          }
-        </ul>
-      </div>
-    </section>
-
-    {/* 4. Blog Preview Section */}
-    {
-      allPostsByDate && allPostsByDate.length > 0 && (
-        <section
-          id='blog-section'
-          class='parallax-section bg-slate-50 py-24 dark:bg-gray-900 dark:bg-opacity-20 md:py-32'
-        >
-          <div class='container mx-auto max-w-3xl px-6'>
-            <h2 class='section-title mb-12 text-center text-3xl font-semibold md:text-4xl'>
-              Hear Me Out
-            </h2>
-            <div class='space-y-10'>
-              {allPostsByDate.map((p) => (
-                <div class='blog-post-item group'>
-                  {/* Wrap PostPreview for potential hover effects */}
-                  <PostPreview post={p} />
-                </div>
-              ))}
-            </div>
-            <div class='mt-16 text-center'>
-              <UButton
-                href={blogPageLink}
-                title='Explore the Blog'
-                size='lg'
-                class='underlined-button astro-pure-button'
-                appendIcon='carbon:arrow-right'
-              />
-            </div>
-          </div>
-        </section>
-      )
-    }
-
-        {/* 5. Contact Me Section - ADDED */}
-        <section id='contact-section' class='parallax-section py-24 md:py-32'>
-          <div class='container mx-auto max-w-3xl px-6 text-center'>
-            <h2 class='section-title mb-6 text-3xl font-semibold md:text-4xl'>Get In Touch</h2>
-            <p class='section-content mb-12 text-lg text-slate-700 dark:text-slate-300 md:text-xl'>
-              I'm always open to discussing new projects, creative ideas, or opportunities to be part
-              of your visions. Feel free to reach out!
-            </p>
-    
-            <!-- {/* Email Button */}
-            <div class='section-content mb-12'>
-              {' '}
-              {/* Wrap button for animation targeting */}
-              <UButton
-                href={`mailto:${emailAddress}`}
-                title='Send me an Email'
-                size='lg'
-                class='underlined-button astro-pure-button'
-                prependIcon='carbon:email'
-              />
-            </div> -->
-    
-            {/* Social Links */}
-            {
-              socials && socials.length > 0 && (
-                <div class='section-content flex items-center justify-center gap-6 md:gap-8'>
-                  {' '}
-                  {/* Wrap links for animation targeting */}
-                  {socials.map((social) => (
-                    <a
-                      href={social.url}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      aria-label={`Visit my ${social.name} profile`}
-                      class='text-slate-500 transition-colors duration-300 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400'
-                    >
-                      <Icon
-                        name={social.icon}
-                        class='h-6 w-6'
-                        aria-hidden='true'
-                      />
-                    </a>
-                  ))}
-                </div>
-              )
-            }
-          </div>
-        </section>
-    
   </div>
-  {/* End content-container */}
+
+  {/* Color-Inversion Backdrop Layer (smoothly transitions on "Who I am") */}
+  <div id='invert-backdrop' class='invert-backdrop' aria-hidden='true'></div>
+
+  {/* Fixed Full-Bleed 3D Morphing Canvas */}
+  <canvas id='morph-canvas' class='morph-canvas' aria-hidden='true'></canvas>
+
+  {/* Minimalist Right-Side Chapter Rail */}
+  <aside id='chapter-rail' class='chapter-rail' aria-label='Story navigation'>
+    {
+      chapterNav.map((item) => (
+        <button
+          type='button'
+          class='chapter-dot-btn'
+          data-target-chapter={item.idx}
+          aria-label={`Jump to ${item.label}`}
+          data-cursor='link'
+        >
+          <span class='chapter-dot-label'>{item.label}</span>
+          <span class='chapter-dot-pip'></span>
+        </button>
+      ))
+    }
+  </aside>
+
+  {/* Unified Scroll Narrative Container */}
+  <main id='home-narrative' class='home-narrative'>
+    {/* SECTION 0: HERO ("Call me \n Norb") */}
+    <section id='hero-section' class='hero-stage' data-scene='0'>
+      <div class='mx-auto flex h-full w-full max-w-[90rem] flex-col justify-between px-6 pb-10 pt-28 sm:px-10 md:pb-12'>
+        <div></div>
+
+        <div id='hero-tilt-stage' class='hero-tilt-stage max-w-2xl'>
+          <p class='hero-eyebrow mb-5 font-mono text-xs uppercase tracking-[0.26em] opacity-45'>
+            00 / Portfolio &amp; Notes
+          </p>
+
+          <h1 class='hero-title select-none'>
+            <span class='hero-line-1 block text-4xl font-light tracking-[-0.03em] sm:text-5xl md:text-6xl'>
+              Call me
+            </span>
+            <span
+              class='hero-line-2 mt-1 inline-flex items-baseline text-[clamp(4.75rem,13vw,9.75rem)] font-semibold leading-[0.94] tracking-[-0.055em]'
+            >
+              <span class='norb-letter'>N</span><span
+                id='norb-o-slot'
+                class='norb-o-slot'
+                aria-label='o'>o</span
+              ><span class='norb-letter'>rb</span>
+            </span>
+          </h1>
+
+          <p class='hero-subtext mt-7 max-w-md text-base leading-relaxed opacity-70 sm:text-lg'>
+            An aspiring student developer working on LLM Agentic and Computer Vision
+          </p>
+
+          <div class='hero-actions mt-9 flex flex-wrap items-center gap-6 text-sm'>
+            <a href='/projects' class='hero-portal-link' data-cursor='link'>
+              <span>Projects</span>
+              <span class='portal-arrow' aria-hidden='true'>↗</span>
+            </a>
+            <a href='/blog' class='hero-portal-link' data-cursor='link'>
+              <span>Blogs</span>
+              <span class='portal-arrow' aria-hidden='true'>↗</span>
+            </a>
+          </div>
+        </div>
+
+        <div class='hero-scroll-cue flex items-center justify-between text-xs tracking-[0.18em] uppercase opacity-45'>
+          <div class='flex items-center gap-3'>
+            <span class='scroll-line' aria-hidden='true'></span>
+            <span>Scroll to explore</span>
+          </div>
+          <span class='hidden font-mono sm:inline'>SJTU · GAIR Lab</span>
+        </div>
+      </div>
+    </section>
+
+    {/* SECTIONS 1-6: STICKY AUTOBIOGRAPHY THEATER */}
+    <section id='bio-track' class='bio-track' aria-label='Autobiography'>
+      <div class='bio-sticky'>
+        <div class='mx-auto flex h-full w-full max-w-[90rem] flex-col justify-center px-6 sm:px-10'>
+          <div class='bio-stage-content max-w-2xl'>
+            {/* Chapter Index & Context Tag */}
+            <div class='mb-6 flex items-center gap-4 font-mono text-xs uppercase tracking-[0.22em]'>
+              <span id='bio-counter' class='opacity-55'>01 / 06</span>
+              <span class='h-px w-8 bg-current opacity-25' aria-hidden='true'></span>
+              <span id='bio-tag' class='opacity-55'>{bioChapters[0].tag}</span>
+            </div>
+
+            {/* Static "I am a " + Morphing Role Title */}
+            <div class='bio-headline-wrap'>
+              <div id='bio-prefix-wrap' class='bio-prefix-wrap'>
+                <span class='bio-prefix text-3xl font-light tracking-[-0.03em] opacity-60 sm:text-5xl md:text-[3.4rem]'>
+                  I am a
+                </span>
+              </div>
+
+              <div class='bio-word-viewport' aria-live='polite'>
+                {
+                  bioChapters.map((ch, i) => (
+                    <h2
+                      class:list={['bio-word-item', i === 0 && 'is-active']}
+                      data-bio-index={i}
+                      data-invert={ch.invert ? 'true' : 'false'}
+                    >
+                      {ch.word}
+                    </h2>
+                  ))
+                }
+              </div>
+            </div>
+
+            {/* Morphing Description Copy */}
+            <div class='bio-copy-viewport mt-7'>
+              {
+                bioChapters.map((ch, i) => (
+                  <p
+                    class:list={['bio-copy-item', i === 0 && 'is-active']}
+                    data-bio-index={i}
+                    set:html={ch.bodyHtml}
+                  />
+                ))
+              }
+            </div>
+
+            {/* Subtle Chapter Progress Hairline */}
+            <div class='mt-10 flex items-center gap-3'>
+              <div class='bio-progress-track'>
+                <div id='bio-progress-fill' class='bio-progress-fill'></div>
+              </div>
+              <span id='bio-next-hint' class='font-mono text-[11px] uppercase tracking-[0.18em] opacity-40'>
+                Next · Frontier Researcher
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scroll step sentinels for exact deterministic chapter mapping */}
+      <div class='bio-sentinels' aria-hidden='true'>
+        {bioChapters.map((ch, i) => <div class='bio-sentinel' data-chapter={i + 1} id={`chapter-${ch.id}`}></div>)}
+      </div>
+    </section>
+
+    {/* SECTION 7: FINALE ("I am Norb" + Contact + Portals) */}
+    <section id='finale-section' class='finale-stage' data-scene='7'>
+      <div class='mx-auto flex min-h-screen w-full max-w-[90rem] flex-col justify-between px-6 pb-10 pt-28 sm:px-10'>
+        <div></div>
+
+        <div class='finale-content max-w-2xl'>
+          <p class='mb-5 font-mono text-xs uppercase tracking-[0.26em] opacity-45'>
+            07 / Full Circle
+          </p>
+
+          <h2 class='finale-heading text-[clamp(3.25rem,9.5vw,7.5rem)] font-semibold leading-[0.98] tracking-[-0.05em]'>
+            <span class='font-light opacity-65'>I am </span><span>Norb</span><span class='opacity-40'>.</span>
+          </h2>
+
+          <p class='mt-6 max-w-lg text-base leading-relaxed opacity-65 sm:text-lg'>
+            Always open to conversations on LLM agents, computer vision, creative coding, or a quiet walk through a botanical garden.
+          </p>
+
+          {/* Direct Portals to Core Sections */}
+          <div class='mt-10 grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-2'>
+            <a href='/projects' class='finale-portal-card group' data-cursor='link'>
+              <div class='flex items-center justify-between'>
+                <span class='font-mono text-[11px] uppercase tracking-[0.2em] opacity-50'>01 · Helix</span>
+                <span class='transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5'>↗</span>
+              </div>
+              <div class='mt-5 text-xl font-medium tracking-[-0.02em]'>Projects</div>
+              <p class='mt-1.5 text-sm opacity-60'>Compilers, AI systems, tools &amp; creative photography.</p>
+            </a>
+
+            <a href='/blog' class='finale-portal-card group' data-cursor='link'>
+              <div class='flex items-center justify-between'>
+                <span class='font-mono text-[11px] uppercase tracking-[0.2em] opacity-50'>02 · Index</span>
+                <span class='transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5'>↗</span>
+              </div>
+              <div class='mt-5 text-xl font-medium tracking-[-0.02em]'>Blogs</div>
+              <p class='mt-1.5 text-sm opacity-60'>Notes on systems, research, design &amp; personal thoughts.</p>
+            </a>
+          </div>
+
+          {/* Contact Information */}
+          <div class='mt-12 border-t border-current/15 pt-7'>
+            <div class='mb-4 font-mono text-[11px] uppercase tracking-[0.22em] opacity-45'>
+              Contact &amp; Elsewhere
+            </div>
+            <div class='flex flex-wrap gap-x-7 gap-y-3'>
+              {
+                extraLinks.map((item) => (
+                  <a
+                    href={item.url}
+                    target={item.url.startsWith('http') ? '_blank' : undefined}
+                    rel={item.url.startsWith('http') ? 'noopener noreferrer' : undefined}
+                    class='contact-link group inline-flex items-baseline gap-2 text-sm no-underline'
+                    data-cursor='link'
+                  >
+                    <span class='font-medium'>{item.name}</span>
+                    <span class='font-mono text-xs opacity-50 transition-opacity group-hover:opacity-90'>
+                      {item.label}
+                    </span>
+                  </a>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+
+        <footer class='mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-current/10 pt-6 text-xs opacity-45'>
+          <span>© {new Date().getFullYear()} Norb · Ray Zhang</span>
+          <div class='flex items-center gap-5'>
+            <a href='/about' class='hover:opacity-100' data-cursor='link'>About</a>
+            <a href='/gallery' class='hover:opacity-100' data-cursor='link'>Gallery</a>
+            <a href='/rss.xml' class='hover:opacity-100' data-cursor='link'>RSS</a>
+          </div>
+        </footer>
+      </div>
+    </section>
+  </main>
 </PageLayout>
 
-{/* ----- STYLES ----- */}
 <style is:global>
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
+  /* Theme-adaptive inversion variables for "Who I am" */
+  :root {
+    --home-bg: #fafafa;
+    --home-fg: #0e0e0e;
+    --home-inv-bg: #080808;
+    --home-inv-fg: #fafafa;
+  }
+  html.dark {
+    --home-bg: #0b0b0b;
+    --home-fg: #f5f5f5;
+    --home-inv-bg: #f6f6f6;
+    --home-inv-fg: #0c0c0c;
   }
 
-  /* General transition for dark mode */
-  body,
-  .content-container,
-  .project-card,
-  .parallax-section {
-    transition:
-      background-color 0.3s ease-in-out,
-      border-color 0.3s ease-in-out;
+  body.home-inverted {
+    color: var(--home-inv-fg) !important;
+  }
+  body.home-inverted #site-header {
+    color: var(--home-inv-fg) !important;
+  }
+  body.home-inverted .chapter-rail {
+    color: var(--home-inv-fg);
   }
 
-  /* REMOVED fadeInUp animation */
-
-  /* Styles for character spans (set by JS) */
-  .hero-char {
-    display: inline-block; /* Allows transform */
-    opacity: 0; /* Start hidden */
-    /* transform: translateY(15px) rotateX(-90deg); */ /* Starting point */
-    transform: scale(1.2);
-    filter: blur(0.5px);
-    transform-origin: center; /* Rotate around bottom */
-    will-change: transform, opacity;
-  }
-
-  .hero-char.hero-tagline {
-    filter: blur(0);
-    transform: translateY(15px) rotateX(-90deg);
-  }
-
-  /* Initial state for GSAP animated elements in sections */
-  .parallax-section .section-title,
-  .parallax-section .section-content,
-  .parallax-section .project-card,
-  .parallax-section .hobby-item,
-  .parallax-section .blog-post-item,
-  .parallax-section .astro-pure-button {
+  .invert-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-color: var(--home-inv-bg);
     opacity: 0;
-    transform: translateY(50px);
-    will-change: transform, opacity;
+    pointer-events: none;
+    transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .project-card {
-    cursor: pointer;
-  }
-  .project-card:hover div img {
-    transform: scale(1.05);
+  body.home-inverted .invert-backdrop {
+    opacity: 1;
   }
 
-  /* Underlined Button Style */
-  .underlined-button {
+  .morph-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* Minimalistic Circle Loader */
+  .norb-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .norb-loader.is-revealing {
+    background-color: transparent;
+    pointer-events: none;
+  }
+  .norb-loader.is-done {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+  .loader-circle-wrap {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 112px;
+    height: 112px;
+    transform: translate(-50%, -50%);
+    will-change: transform, width, height, opacity;
+  }
+  .loader-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* Hero */
+  .home-narrative {
     position: relative;
+    z-index: 2;
+  }
+  .hero-stage {
+    position: relative;
+    min-height: 100svh;
+    height: 100svh;
+    display: flex;
+    flex-direction: column;
+  }
+  .hero-tilt-stage {
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  .hero-line-1 {
+    transform: translateZ(18px);
+  }
+  .hero-line-2 {
+    transform: translateZ(36px);
+  }
+  .hero-subtext {
+    transform: translateZ(14px);
+  }
+  .norb-o-slot {
+    display: inline-block;
+    position: relative;
+  }
+  .hero-portal-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding-bottom: 4px;
-    text-decoration: none !important;
+    gap: 0.45rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid currentColor;
     color: inherit;
+    text-decoration: none;
     font-weight: 500;
-    transition: color 0.3s ease;
+    letter-spacing: -0.01em;
+    opacity: 0.85;
+    transition: opacity 0.25s ease, gap 0.25s ease;
   }
-
-  .underlined-button::after {
+  .hero-portal-link:hover {
+    opacity: 1;
+    gap: 0.7rem;
+    color: inherit;
+  }
+  .scroll-line {
+    display: inline-block;
+    width: 34px;
+    height: 1px;
+    background: currentColor;
+    position: relative;
+    overflow: hidden;
+  }
+  .scroll-line::after {
     content: '';
     position: absolute;
-    bottom: 0;
+    inset: 0;
+    background: currentColor;
+    animation: scrollPulse 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+  @keyframes scrollPulse {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(0%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* Autobiography Sticky Theater */
+  .bio-track {
+    position: relative;
+    height: 620vh;
+  }
+  .bio-sticky {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+  .bio-sentinels {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .bio-sentinel {
+    flex: 1 1 0%;
+  }
+
+  .bio-headline-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .bio-prefix-wrap {
+    overflow: hidden;
+    max-height: 4.5rem;
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      max-height 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.4s ease,
+      transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .bio-prefix-wrap.is-hidden {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+
+  .bio-word-viewport {
+    display: grid;
+    align-items: start;
+  }
+  .bio-word-item {
+    grid-area: 1 / 1;
+    position: relative;
+    margin: 0;
+    font-size: clamp(2.35rem, 4.8vw, 4.2rem);
+    font-weight: 600;
+    line-height: 1.06;
+    letter-spacing: -0.04em;
+    opacity: 0;
+    transform: translate3d(0, 32px, 0);
+    filter: blur(6px);
+    pointer-events: none;
+    transition:
+      opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+      filter 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .bio-word-item.is-active {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0px);
+    pointer-events: auto;
+  }
+  .bio-word-item.is-past {
+    opacity: 0;
+    transform: translate3d(0, -32px, 0);
+    filter: blur(6px);
+  }
+
+  .bio-copy-viewport {
+    display: grid;
+    align-items: start;
+  }
+  .bio-copy-item {
+    grid-area: 1 / 1;
+    position: relative;
+    margin: 0;
+    max-width: 34rem;
+    font-size: clamp(1rem, 1.3vw, 1.125rem);
+    line-height: 1.78;
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+    pointer-events: none;
+    transition:
+      opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .bio-copy-item.is-active {
+    opacity: 0.78;
+    transform: translate3d(0, 0, 0);
+    pointer-events: auto;
+  }
+  .bio-copy-item.is-past {
+    opacity: 0;
+    transform: translate3d(0, -18px, 0);
+  }
+
+  .bio-inline-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1px;
+    font-weight: 500;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+  }
+  .bio-inline-link:hover {
+    opacity: 0.7;
+    color: inherit;
+  }
+
+  .bio-progress-track {
+    width: 96px;
+    height: 1.5px;
+    background: currentColor;
+    opacity: 0.22;
+    position: relative;
+    overflow: hidden;
+  }
+  .bio-progress-fill {
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    transform-origin: left center;
+    transform: scaleX(0.16);
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Finale */
+  .finale-stage {
+    position: relative;
+    min-height: 100svh;
+  }
+  .finale-portal-card {
+    display: block;
+    padding: 1.35rem 1.45rem;
+    border-radius: 0.85rem;
+    border: 1px solid hsl(var(--border) / 0.85);
+    background: hsl(var(--background) / 0.68);
+    backdrop-filter: blur(12px);
+    color: inherit;
+    text-decoration: none;
+    transition:
+      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.25s ease,
+      background-color 0.25s ease;
+  }
+  .finale-portal-card:hover {
+    transform: translateY(-3px);
+    border-color: hsl(var(--foreground) / 0.45);
+    background: hsl(var(--background) / 0.9);
+    color: inherit;
+  }
+  .contact-link {
+    color: inherit;
+    position: relative;
+    padding-bottom: 2px;
+  }
+  .contact-link::after {
+    content: '';
+    position: absolute;
     left: 0;
-    width: 100%;
-    height: 2px;
-    background-color: var(--theme-accent, #5e81ac);
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: currentColor;
     transform: scaleX(0);
     transform-origin: left;
-    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   }
-
-  .underlined-button:hover::after,
-  .underlined-button:focus::after {
+  .contact-link:hover::after {
     transform: scaleX(1);
   }
-
-  /* Ensure last section has padding */
-  .content-container section:last-child {
-    padding-bottom: 8rem;
+  .contact-link:hover {
+    color: inherit;
   }
 
-  /* Reduced Motion Preferences */
+  /* Right-Edge Chapter Rail */
+  .chapter-rail {
+    position: fixed;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.65rem;
+    color: hsl(var(--foreground));
+    transition: color 0.45s ease;
+  }
+  .chapter-dot-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.2rem 0.1rem;
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  .chapter-dot-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0;
+    transform: translateX(6px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+  .chapter-dot-btn:hover .chapter-dot-label,
+  .chapter-dot-btn.is-active .chapter-dot-label {
+    opacity: 0.6;
+    transform: translateX(0);
+  }
+  .chapter-dot-pip {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: currentColor;
+    opacity: 0.22;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+  }
+  .chapter-dot-btn.is-active .chapter-dot-pip {
+    opacity: 0.95;
+    transform: scale(1.6);
+  }
+
+  @media (max-width: 768px) {
+    .chapter-rail {
+      display: none;
+    }
+    .bio-copy-viewport {
+      min-height: 12.5rem;
+    }
+    .morph-canvas {
+      opacity: 0.48;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    html {
-      scroll-behavior: auto;
+    .norb-loader {
+      display: none !important;
     }
-    /* REMOVED fade-in-up styles */
-
-    /* Ensure hero text is visible immediately */
-    #hero-greeting, #hero-name, #hero-tagline {
-        opacity: 1 !important;
-    }
-    /* Ensure character spans (if somehow created) are visible */
-    .hero-char {
-        opacity: 1 !important;
-        transform: none !important;
-    }
-
-    .parallax-section .section-title,
-    .parallax-section .section-content,
-    .parallax-section .project-card,
-    .parallax-section .hobby-item,
-    .parallax-section .blog-post-item,
-    .parallax-section .astro-pure-button {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    .underlined-button::after {
-      transition: none;
-    }
-    .project-card:hover {
-      transform: none;
-      box-shadow: none;
-    }
-    .project-card img:hover {
-      transform: none;
-    }
-    /* GSAP animations will be disabled by the script */
   }
 </style>
 
-{/* ----- GSAP SCRIPT ----- */}
 <script>
   import { gsap } from 'gsap'
-  import { ScrollTrigger } from 'gsap/ScrollTrigger'
+  import { MorphSceneEngine } from '../lib/webgl-morph'
 
-  gsap.registerPlugin(ScrollTrigger)
-  enum splitTextOptions {
-    chars = 'chars',
-    words = 'words',
-    lines = 'lines'
-  }
+  const CHAPTER_META = [
+    { tag: 'SJTU · ACM Class', next: 'Next · Frontier Researcher' },
+    { tag: 'GAIR Lab · AI Research', next: 'Next · Creative Designer' },
+    { tag: '3D Modeling · CG Art', next: 'Next · Photographer' },
+    { tag: 'Light · Travel Frames', next: 'Next · Botanist' },
+    { tag: 'Flora · Field Excursions', next: 'Next · Who I am' },
+    { tag: 'Synthesis · Many Facets', next: 'Next · I am Norb' }
+  ]
 
-  function splitString(str: string, options: splitTextOptions) {
-    switch (options) {
-      case splitTextOptions.chars:
-        return str.split('').map((char) => char === ' ' ? '&nbsp;' : char)
-      case splitTextOptions.words:
-        return str.split(' ').map((word) => word + '&nbsp;')
-      case splitTextOptions.lines:
-        return str.split('\n').map((line) => line + '\n')
-      default:
-        return str.split('')
-    }
-  }
+  function initHome() {
+    const canvas = document.getElementById('morph-canvas') as HTMLCanvasElement | null
+    const engine = canvas ? new MorphSceneEngine({ canvas, particleCount: 2800, linePairs: 150 }) : null
 
-  // Helper function to split text into character spans
-  function splitTextIntoSpans(selector: string, options: splitTextOptions = splitTextOptions.chars) {
-    const element = document.querySelector(selector)
-    if (!element) return null // Element not found
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    const originalId = element.id;
+    // 1. Minimalistic Circle Loading Animation -> becomes the "o" in Norb
+    const loader = document.getElementById('norb-loader')
+    const loaderWrap = document.getElementById('loader-circle-wrap')
+    const loaderArc = document.getElementById('loader-arc') as SVGCircleElement | null
+    const loaderTrack = document.getElementById('loader-track') as SVGCircleElement | null
+    const oSlot = document.getElementById('norb-o-slot')
+    const heroFadeTargets = document.querySelectorAll(
+      '.hero-eyebrow, .hero-line-1, .norb-letter, .hero-subtext, .hero-actions, .hero-scroll-cue, #site-header, #chapter-rail'
+    )
 
-    const text = element.textContent?.trim() ?? ''
-    element.innerHTML = '' // Clear existing content
-
-    const splitWord = splitString(text, options)
-    console.log('Split text:', splitWord) // Debugging log
-
-    const chars = splitWord.map((char) => {
-      const span = document.createElement('span')
-      // span.className = 'hero-char' // Add class for styling and targeting
-      span.classList.add('hero-char')
-      if (originalId) {
-        span.classList.add(originalId) // Add the original ID as a class
-      }
-      // Handle spaces: use non-breaking space for layout consistency
-      span.innerHTML = char
-      element.appendChild(span)
-      return span
-    })
-    return chars // Return the array of span elements
-  }
-
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    // --- Select Hero Elements ---
-    const heroGreeting = document.getElementById('hero-greeting');
-    const heroName = document.getElementById('hero-name');
-    const heroTagline = document.getElementById('hero-tagline');
-
-    if (prefersReducedMotion) {
-      console.log('Reduced motion enabled, skipping GSAP animations.')
-      // Ensure elements styled for animation are visible
-      gsap.set(
-        '.parallax-section .section-title, .parallax-section .section-content, .parallax-section .project-card, .parallax-section .hobby-item, .parallax-section .blog-post-item, .parallax-section .astro-pure-button',
-        { opacity: 1, y: 0 }
-      )
-      // Ensure hero text is visible (redundant with CSS but safe)
-      gsap.set([heroGreeting, heroName, heroTagline], { opacity: 1 })
-      return // Exit script early
+    let introFinished = false
+    const finishIntroImmediately = () => {
+      if (introFinished) return
+      introFinished = true
+      loader?.classList.add('is-done')
+      gsap.set(heroFadeTargets, { opacity: 1, y: 0, clearProps: 'transform' })
+      if (oSlot) gsap.set(oSlot, { opacity: 1 })
+      engine?.setOpacity(1)
     }
 
-    console.log('Initializing GSAP animations...')
-
-    // --- Split Hero Text ---
-    const greetingChars = splitTextIntoSpans('#hero-greeting');
-    const nameChars = splitTextIntoSpans('#hero-name');
-    const taglineChars = splitTextIntoSpans('#hero-tagline', splitTextOptions.words);
-
-    // --- GSAP Hero Character Animation ---
-    if (greetingChars && nameChars && taglineChars) {
-        const heroTl = gsap.timeline({ delay: 0.3 }); // Add a small delay before starting
-
-        heroTl
-            .to(greetingChars, {
-                opacity: 1,
-                y: 0,
-                rotateX: 0,
-                scale: 1,
-                filter: 'blur(0px)',
-                stagger: 0.03, // Time between each character animation
-                duration: 0.6, // Duration for each character
-                ease: 'power2.out',
-            })
-            .to(nameChars, {
-                opacity: 1,
-                y: 0,
-                rotateX: 0,
-                scale: 1,
-                filter: 'blur(0px)',
-                stagger: 0.04, // Slightly slower stagger for the name
-                duration: 2,
-                ease: 'power2.out',
-            }, "-=0.5") // Overlap slightly with previous animation
-            .to(taglineChars, {
-                opacity: 1,
-                y: 0,
-                rotateX: 0,
-                scale: 1,
-                filter: 'blur(0px)',
-                stagger: 0.05, // Faster stagger for the tagline
-                duration: 1,
-                ease: 'power1.out',
-            }, "-=1.5"); // Overlap more
+    if (prefersReduced || !loader || !loaderWrap || !loaderArc || !oSlot || window.scrollY > 40) {
+      finishIntroImmediately()
     } else {
-        // Fallback if splitting fails: just fade in the whole lines
-        gsap.set([heroGreeting, heroName, heroTagline], { opacity: 0, y: 15 }); // Initial state
-        gsap.to([heroGreeting, heroName, heroTagline], {
-            opacity: 1,
-            y: 0,
-            duration: 0.8,
-            stagger: 0.8, // Stagger lines
-            ease: 'power2.out',
-            delay: 0.3
-        });
-    }
+      const r = 38
+      const circumference = 2 * Math.PI * r
+      loaderArc.style.strokeDasharray = `${circumference}`
+      loaderArc.style.strokeDashoffset = `${circumference}`
 
-
-    // --- Hero Text Parallax Fade Out on Scroll ---
-    gsap.to('.hero-section .text-container', {
-      yPercent: -40,
-      opacity: 0,
-      ease: 'none',
-      scrollTrigger: {
-        trigger: '.hero-section',
-        start: 'top top',
-        end: 'bottom 70%',
-        scrub: 1.2
-        // markers: true,
-      }
-    })
-
-    // --- Content Section Animations ---
-    gsap.utils.toArray<Element>('.parallax-section').forEach((section) => {
-      const title = section.querySelector('.section-title')
-      const content = section.querySelectorAll(
-        '.section-content, .hobby-item, .blog-post-item, .astro-pure-button:not(.project-card .astro-pure-button)'
-      )
-      const cards = section.querySelectorAll('.project-card')
+      gsap.set(heroFadeTargets, { opacity: 0, y: 14 })
+      gsap.set(oSlot, { opacity: 0 })
+      engine?.setOpacity(0)
 
       const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: section,
-          start: 'top 85%',
-          end: 'bottom 20%',
-          toggleActions: 'play none none reverse'
-          // markers: true,
-        },
-        defaults: {
-          ease: 'power3.out',
-          duration: 0.9
+        onComplete: () => {
+          introFinished = true
+          loader.classList.add('is-done')
         }
       })
 
-      if (title) { tl.to(title, { opacity: 1, y: 0 }, 0) }
-      if (content.length > 0) { tl.to(content, { opacity: 1, y: 0, stagger: 0.18 }, '-=0.6') }
-      if (cards.length > 0) {
-        tl.to(cards, { opacity: 1, y: 0, duration: 0.7, stagger: { amount: 0.5, from: 'start' } }, '-=0.7')
+      // Step A: Draw circle smoothly starting from the bottom (6 o'clock)
+      tl.to(loaderArc, {
+        strokeDashoffset: 0,
+        duration: 0.82,
+        ease: 'power2.inOut'
+      })
+        // Fade track ring out as circle completes
+        .to(loaderTrack, { opacity: 0, duration: 0.18 }, '-=0.18')
+        // Step B: Morph & fly completed circle directly into the exact "o" of Norb
+        .add(() => {
+          const rect = oSlot.getBoundingClientRect()
+          // Lowercase "o" sits in the lower ~56% of the line-box; match its visual center & height
+          const targetDiameter = rect.width * 1.18
+          const targetCenterX = rect.left + rect.width * 0.5
+          const targetCenterY = rect.top + rect.height * 0.62
+
+          loader.classList.add('is-revealing')
+
+          gsap.to(loaderWrap, {
+            left: targetCenterX,
+            top: targetCenterY,
+            width: targetDiameter,
+            height: targetDiameter,
+            duration: 0.62,
+            ease: 'expo.inOut'
+          })
+          gsap.to(loaderArc, {
+            attr: { 'stroke-width': 13 },
+            duration: 0.62,
+            ease: 'expo.inOut'
+          })
+        })
+        // Step C: Cross-fade the geometric "o" into the real typographic "o" and reveal hero
+        .to(
+          oSlot,
+          {
+            opacity: 1,
+            duration: 0.22,
+            ease: 'power1.out'
+          },
+          '+=0.48'
+        )
+        .to(
+          loaderWrap,
+          {
+            opacity: 0,
+            duration: 0.22,
+            ease: 'power1.out'
+          },
+          '<'
+        )
+        .to(
+          heroFadeTargets,
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.62,
+            stagger: 0.045,
+            ease: 'power3.out',
+            clearProps: 'transform'
+          },
+          '-=0.14'
+        )
+        .to(
+          { v: 0 },
+          {
+            v: 1,
+            duration: 0.85,
+            ease: 'power2.out',
+            onUpdate() {
+              engine?.setOpacity(this.targets()[0].v)
+            }
+          },
+          '-=0.55'
+        )
+
+      // Allow instant skip if user interacts early
+      const skip = () => {
+        tl.kill()
+        finishIntroImmediately()
       }
-    })
+      loader.addEventListener('click', skip, { once: true })
+      window.addEventListener('wheel', skip, { once: true, passive: true })
+    }
 
-    // --- Subtle Section Title Parallax ---
-    gsap.utils.toArray<Element>('.parallax-section .section-title').forEach((title) => {
-      gsap.to(title, {
-        yPercent: -15,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: title.closest('.parallax-section'),
-          start: 'top bottom',
-          end: 'bottom top',
-          scrub: 1.8
+    // 2. Hero Subtle 3D Tilt on Mouse Motion
+    const heroTilt = document.getElementById('hero-tilt-stage')
+    if (heroTilt && !prefersReduced) {
+      let tx = 0
+      let ty = 0
+      let cx = 0
+      let cy = 0
+      window.addEventListener(
+        'pointermove',
+        (e) => {
+          tx = (e.clientX / window.innerWidth - 0.5) * 2
+          ty = (e.clientY / window.innerHeight - 0.5) * 2
+        },
+        { passive: true }
+      )
+      const tiltTick = () => {
+        cx += (tx - cx) * 0.08
+        cy += (ty - cy) * 0.08
+        const rotY = cx * 7.5
+        const rotX = -cy * 5.5
+        const moveX = cx * 10
+        const moveY = cy * 7
+        heroTilt.style.transform = `perspective(1200px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg) translate3d(${moveX.toFixed(1)}px, ${moveY.toFixed(1)}px, 0)`
+        requestAnimationFrame(tiltTick)
+      }
+      requestAnimationFrame(tiltTick)
+    }
+
+    // 3. Continuous Scroll Choreography (Hero -> 6 Autobiography Chapters -> Finale)
+    const heroSection = document.getElementById('hero-section')!
+    const bioTrack = document.getElementById('bio-track')!
+    const finaleSection = document.getElementById('finale-section')!
+
+    const bioPrefixWrap = document.getElementById('bio-prefix-wrap')!
+    const bioCounter = document.getElementById('bio-counter')!
+    const bioTag = document.getElementById('bio-tag')!
+    const bioProgressFill = document.getElementById('bio-progress-fill')!
+    const bioNextHint = document.getElementById('bio-next-hint')!
+    const wordItems = Array.from(document.querySelectorAll<HTMLElement>('.bio-word-item'))
+    const copyItems = Array.from(document.querySelectorAll<HTMLElement>('.bio-copy-item'))
+    const railDots = Array.from(document.querySelectorAll<HTMLButtonElement>('.chapter-dot-btn'))
+
+    let activeBioIdx = 0
+    let activeRailIdx = -1
+
+    function setBioChapter(idx: number) {
+      if (idx === activeBioIdx) return
+      activeBioIdx = idx
+
+      wordItems.forEach((el, i) => {
+        el.classList.toggle('is-active', i === idx)
+        el.classList.toggle('is-past', i < idx)
+      })
+      copyItems.forEach((el, i) => {
+        el.classList.toggle('is-active', i === idx)
+        el.classList.toggle('is-past', i < idx)
+      })
+
+      // Hide "I am a" on "Who I am" (index 5)
+      bioPrefixWrap.classList.toggle('is-hidden', idx === 5)
+      bioCounter.textContent = `${String(idx + 1).padStart(2, '0')} / 06`
+      bioTag.textContent = CHAPTER_META[idx].tag
+      bioNextHint.textContent = CHAPTER_META[idx].next
+      bioProgressFill.style.transform = `scaleX(${((idx + 1) / 6).toFixed(3)})`
+    }
+
+    function setActiveRail(idx: number) {
+      if (idx === activeRailIdx) return
+      activeRailIdx = idx
+      railDots.forEach((btn, i) => btn.classList.toggle('is-active', i === idx))
+    }
+
+    function updateScroll() {
+      const vh = window.innerHeight || 800
+      const scrollY = window.scrollY
+      const bioTop = bioTrack.offsetTop
+      const bioScrollable = Math.max(1, bioTrack.offsetHeight - vh)
+      const finaleTop = finaleSection.offsetTop
+
+      let sceneProgress = 0
+      let isInverted = false
+
+      if (scrollY < bioTop) {
+        // Transitioning smoothly from Scene 0 (Hero) -> Scene 1 (Student Developer)
+        const frac = Math.max(0, Math.min(1, scrollY / Math.max(1, bioTop)))
+        sceneProgress = frac
+        setBioChapter(0)
+        setActiveRail(frac < 0.55 ? 0 : 1)
+      } else if (scrollY <= bioTop + bioScrollable) {
+        // Inside the 6-chapter sticky autobiography theater (Scenes 1..6)
+        const raw = (scrollY - bioTop) / bioScrollable // 0..1
+        const scaled = raw * 5 // 0..5 across chapters 0..5
+        sceneProgress = 1 + scaled
+        const chapterIdx = Math.max(0, Math.min(5, Math.round(scaled)))
+        setBioChapter(chapterIdx)
+        setActiveRail(chapterIdx + 1)
+
+        // Smooth color inversion specifically for "Who I am" (chapter 5, scaled >= 4.42)
+        isInverted = scaled >= 4.42
+      } else {
+        // Transitioning smoothly from Scene 6 ("Who I am") -> Scene 7 ("I am Norb")
+        const finaleDist = Math.max(1, finaleTop - (bioTop + bioScrollable))
+        const frac = Math.max(0, Math.min(1, (scrollY - (bioTop + bioScrollable)) / Math.max(vh * 0.75, finaleDist)))
+        sceneProgress = 6 + frac
+        setBioChapter(5)
+        setActiveRail(frac > 0.35 ? 7 : 6)
+        isInverted = frac < 0.32
+      }
+
+      document.body.classList.toggle('home-inverted', isInverted)
+      engine?.setProgress(sceneProgress)
+      engine?.setInvert(isInverted ? 1 : 0)
+    }
+
+    // Click handlers for right-edge chapter rail
+    railDots.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = Number(btn.dataset.targetChapter ?? '0')
+        const vh = window.innerHeight || 800
+        const bioTop = bioTrack.offsetTop
+        const bioScrollable = Math.max(1, bioTrack.offsetHeight - vh)
+        let destY = 0
+        if (target === 0) {
+          destY = 0
+        } else if (target >= 1 && target <= 6) {
+          destY = bioTop + ((target - 1) / 5) * bioScrollable
+        } else {
+          destY = finaleSection.offsetTop
         }
+        window.scrollTo({ top: destY, behavior: 'smooth' })
       })
     })
 
-    console.log('GSAP animations initialized.')
-  })
+    window.addEventListener('scroll', updateScroll, { passive: true })
+    window.addEventListener('resize', updateScroll, { passive: true })
+    updateScroll()
+
+    // Ensure hero height layout syncs cleanly
+    void heroSection
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHome)
+  } else {
+    initHome()
+  }
 </script>

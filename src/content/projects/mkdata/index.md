@@ -1,17 +1,19 @@
 ---
 projectName: Mkdata
 description: 'Simple but powerful batch data generator based on Python.'
+category: 'Tools'
+year: '2025'
 tags:
-  - Mkdata
-  - Commandline
-  - System Tools
+  - Python
+  - CLI Tools
+  - Testing
 icon: { src: './mkdata.png' }
 gradient: { from: '#90bbf7', to: '#4d5ef7' }
-blogpage: http://norb.space/blog/introducing-mkdata
+blogpage: /blog/introducing-mkdata
 homepage: https://github.com/RayZh-hs/mkdata
-demo: null
+order: 8
 ---
 
-# Mkdata
+Mkdata is a declarative batch test-case and dataset generator written in Python, originally crafted for competitive programming and algorithmic verification.
 
-Simple but powerful batch data generator based on Python.
+Pairs concise DSL syntax with deterministic seeding and parallel generation for reproducible stress-testing.

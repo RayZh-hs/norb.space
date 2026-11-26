@@ -7,6 +7,7 @@ tags:
   - Technology
 heroImage: { src: './thumbnail.jpg', color: '#7ec9ec' }
 language: 'English'
+project: 'mkdata'
 ---
 
 ## A Simple Goal

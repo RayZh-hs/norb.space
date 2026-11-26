@@ -1,6 +1,8 @@
 ---
 projectName: Kotlin-LLVM
 description: 'An LLVM IR generation framework for Kotlin.'
+category: 'Systems & Compilers'
+year: '2025'
 tags:
   - LLVM
   - Compiler
@@ -11,6 +13,6 @@ homepage: https://github.com/RayZh-hs/LLVM
 order: 4
 ---
 
-# Kotlin-LLVM
+An ergonomic, type-safe LLVM IR generation framework crafted for Kotlin compiler frontends.
 
-LLVM IR Generation Framework for Kotlin.
+Provides structured builders for modules, basic blocks, SSA values, and target emission without the boilerplate of raw C bindings.

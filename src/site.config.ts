@@ -48,11 +48,7 @@ export const theme: ThemeUserConfig = {
   header: {
     menu: [
       { title: 'Blog', link: '/blog' },
-      { title: 'Projects', link: '/projects' },
-      // { title: 'Apps', link: '/apps' },
-      { title: 'Gallery', link: '/gallery' },
-      // { title: 'Links', link: '/links' },
-      { title: 'About', link: '/about' }
+      { title: 'Projects', link: '/projects' }
     ]
   },
 
@@ -64,9 +60,9 @@ export const theme: ThemeUserConfig = {
       text: 'Moe ICP APTX4869'
     },
     /** Enable displaying a “Astro & Pure theme powered” link in your site’s footer. */
-    credits: true,
+    credits: false,
     /** Optional details about the social media accounts for this site. */
-    social: { github: 'https://github.com/cworld1/astro-theme-pure' }
+    social: { github: 'https://github.com/RayZh-hs' }
   },
 
   content: {

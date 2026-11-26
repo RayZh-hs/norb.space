@@ -1,0 +1,116 @@
+---
+---
+
+<div id='inversion-cursor' class='inversion-cursor' aria-hidden='true'></div>
+
+<style is:global>
+  @media (hover: hover) and (pointer: fine) {
+    body.has-inversion-cursor,
+    body.has-inversion-cursor a,
+    body.has-inversion-cursor button,
+    body.has-inversion-cursor [role='button'] {
+      cursor: none !important;
+    }
+  }
+
+  .inversion-cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: #ffffff;
+    mix-blend-mode: difference;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0;
+    transform: translate3d(-100px, -100px, 0) translate(-50%, -50%) scale(1);
+    transition:
+      width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      height 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.25s ease;
+    will-change: transform, width, height;
+  }
+
+  .inversion-cursor.is-visible {
+    opacity: 1;
+  }
+
+  .inversion-cursor.is-hovering {
+    width: 44px;
+    height: 44px;
+  }
+
+  .inversion-cursor.is-pressed {
+    width: 13px;
+    height: 13px;
+  }
+
+  @media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+    .inversion-cursor {
+      display: none !important;
+    }
+    body.has-inversion-cursor,
+    body.has-inversion-cursor a,
+    body.has-inversion-cursor button {
+      cursor: auto !important;
+    }
+  }
+</style>
+
+<script>
+  ;(function initInversionCursor() {
+    const cursor = document.getElementById('inversion-cursor')
+    if (!cursor) return
+    if (
+      window.matchMedia('(hover: none)').matches ||
+      window.matchMedia('(pointer: coarse)').matches ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return
+    }
+
+    let targetX = -100
+    let targetY = -100
+    let currentX = -100
+    let currentY = -100
+    let visible = false
+    let rafId = 0
+
+    const interactiveSelector = 'a, button, [role="button"], [data-cursor="link"], input, summary'
+
+    const tick = () => {
+      currentX += (targetX - currentX) * 0.22
+      currentY += (targetY - currentY) * 0.22
+      cursor.style.transform = `translate3d(${currentX.toFixed(2)}px, ${currentY.toFixed(2)}px, 0) translate(-50%, -50%)`
+      rafId = requestAnimationFrame(tick)
+    }
+
+    window.addEventListener(
+      'pointermove',
+      (e) => {
+        targetX = e.clientX
+        targetY = e.clientY
+        if (!visible) {
+          currentX = targetX
+          currentY = targetY
+          visible = true
+          cursor.classList.add('is-visible')
+          if (!rafId) rafId = requestAnimationFrame(tick)
+        }
+        const el = document.elementFromPoint(e.clientX, e.clientY)
+        const isInteractive = !!el?.closest(interactiveSelector)
+        cursor.classList.toggle('is-hovering', isInteractive)
+      },
+      { passive: true }
+    )
+
+    window.addEventListener('pointerdown', () => cursor.classList.add('is-pressed'), { passive: true })
+    window.addEventListener('pointerup', () => cursor.classList.remove('is-pressed'), { passive: true })
+    document.addEventListener('pointerleave', () => {
+      visible = false
+      cursor.classList.remove('is-visible')
+    })
+  })()
+</script>

@@ -1,0 +1,134 @@
+---
+import { Image } from 'astro:assets'
+import type { CollectionEntry, InferEntrySchema } from 'astro:content'
+import { FormattedDate } from 'astro-pure/user'
+import { normalizeProjectSlug } from '@/lib/content-links'
+
+interface Props {
+  data: InferEntrySchema<'blog'>
+  remarkPluginFrontmatter: Record<string, unknown>
+  hostProject?: CollectionEntry<'projects'> | null
+}
+
+const {
+  data: {
+    title,
+    description,
+    draft,
+    heroImage,
+    publishDate,
+    updatedDate,
+    tags,
+    language
+  },
+  remarkPluginFrontmatter,
+  hostProject = null
+} = Astro.props
+
+const hostSlug = hostProject ? normalizeProjectSlug(hostProject) : null
+const dateTimeOptions: Intl.DateTimeFormatOptions = {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric'
+}
+---
+
+<header class='blog-hero'>
+  {/* Metadata line */}
+  <div class='flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground'>
+    <FormattedDate date={publishDate} dateTimeOptions={dateTimeOptions} />
+    {
+      updatedDate && (
+        <>
+          <span class='opacity-40'>/</span>
+          <span>
+            Updated <FormattedDate date={updatedDate} dateTimeOptions={dateTimeOptions} />
+          </span>
+        </>
+      )
+    }
+    {
+      remarkPluginFrontmatter.minutesRead && (
+        <>
+          <span class='opacity-40'>·</span>
+          <span>{remarkPluginFrontmatter.minutesRead}</span>
+        </>
+      )
+    }
+    {
+      language && (
+        <>
+          <span class='opacity-40'>·</span>
+          <span>{language}</span>
+        </>
+      )
+    }
+    {draft && <span class='text-destructive'>(Draft)</span>}
+  </div>
+
+  {/* Article Title */}
+  <h1 class='mt-5 text-3xl font-semibold leading-[1.14] tracking-[-0.035em] text-foreground sm:text-4xl lg:text-[2.65rem]'>
+    {title}
+  </h1>
+
+  {/* Editorial Deck / Description */}
+  <p class='mt-4 max-w-[60ch] text-base leading-relaxed text-muted-foreground sm:text-lg'>
+    {description}
+  </p>
+
+  {/* Tags + Host Project Strip */}
+  <div class='mt-6 flex flex-wrap items-center justify-between gap-4 border-y border-border/70 py-4'>
+    <div class='flex flex-wrap items-center gap-2'>
+      {
+        tags?.map((tag: string) => (
+          <a
+            href={`/tags/${tag}`}
+            data-pagefind-filter='tag'
+            class='rounded-full border border-border px-2.5 py-0.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground no-underline transition-colors hover:border-foreground hover:text-foreground'
+          >
+            #{tag}
+          </a>
+        ))
+      }
+    </div>
+
+    {
+      hostProject && hostSlug && (
+        <div class='flex flex-wrap items-center gap-2'>
+          <span class='font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground'>
+            Host Project
+          </span>
+          <a
+            href={`/projects?project=${encodeURIComponent(hostSlug)}`}
+            class='group inline-flex items-center gap-2 rounded-full border border-foreground/25 bg-foreground/[0.04] px-3.5 py-1 text-xs font-medium text-foreground no-underline transition-all hover:border-foreground hover:bg-foreground hover:text-background'
+          >
+            <span
+              class='inline-block size-1.5 rounded-full'
+              style={`background-color: ${hostProject.data.gradient.from};`}
+              aria-hidden='true'
+            />
+            <span>{hostProject.data.projectName}</span>
+            <span class='transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5'>
+              ↗
+            </span>
+          </a>
+        </div>
+      )
+    }
+  </div>
+
+  {/* Clean Framed Cover Image (no loud blur glow) */}
+  {
+    heroImage && (
+      <figure class='mt-8 overflow-hidden rounded-xl border border-border/70 bg-muted/30'>
+        <Image
+          alt={heroImage.alt || title}
+          class='h-auto max-h-[460px] w-full object-cover'
+          fetchpriority='high'
+          loading='eager'
+          {...heroImage}
+        />
+      </figure>
+    )
+  }
+</header>

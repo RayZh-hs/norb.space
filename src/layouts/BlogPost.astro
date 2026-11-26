@@ -6,9 +6,11 @@ import type { CollectionEntry } from 'astro:content'
 import 'katex/dist/katex.min.css'
 
 import { Comment, MediumZoom } from 'astro-pure/advanced'
-import { ArticleBottom, Hero, TOC } from 'astro-pure/components/pages'
+import { ArticleBottom, TOC } from 'astro-pure/components/pages'
 import { Copyright } from '^/components/pages/custom'
+import BlogHero from '@/components/blog/BlogHero.astro'
 import PageLayout from '@/layouts/ContentLayout.astro'
+import { getHostProjectForPost, getProjectMap, normalizeProjectSlug } from '@/lib/content-links'
 import { integ } from '@/site-config'
 
 interface Props {
@@ -19,12 +21,13 @@ interface Props {
 }
 
 const {
-  post: { id, data },
+  post,
   posts,
   headings,
   remarkPluginFrontmatter
 } = Astro.props
 
+const { id, data } = post
 const {
   description,
   heroImage,
@@ -34,6 +37,10 @@ const {
   draft: isDraft,
   comment: enableComment
 } = data
+
+const projectMap = await getProjectMap()
+const hostProject = getHostProjectForPost(post, projectMap)
+const hostSlug = hostProject ? normalizeProjectSlug(hostProject) : null
 
 const socialImage = heroImage
   ? typeof heroImage.src === 'string'
@@ -48,21 +55,87 @@ const primaryColor = data.heroImage?.color ?? 'hsl(var(--primary) / var(--un-tex
   meta={{ articleDate, description, ogImage: socialImage, title }}
   highlightColor={primaryColor}
   back='/blog'
+  backLabel='All Blogs'
+  showReadingProgress={true}
 >
-  {!!headings.length && <TOC {headings} slot='sidebar' />}
+  <Fragment slot='sidebar'>
+    {
+      hostProject && hostSlug && (
+        <div class='mb-8 rounded-xl border border-border/80 bg-card/60 p-4'>
+          <div class='flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground'>
+            <span
+              class='inline-block size-1.5 rounded-full'
+              style={`background-color: ${hostProject.data.gradient.from};`}
+              aria-hidden='true'
+            />
+            <span>Host Project</span>
+          </div>
+          <div class='mt-2 text-sm font-semibold text-foreground'>
+            {hostProject.data.projectName}
+          </div>
+          <p class='mt-1 text-xs leading-relaxed text-muted-foreground'>
+            {hostProject.data.description}
+          </p>
+          <div class='mt-3 flex flex-wrap gap-2'>
+            <a
+              href={`/projects?project=${encodeURIComponent(hostSlug)}`}
+              class='inline-flex items-center gap-1 rounded-md border border-foreground/25 px-2.5 py-1 text-[11px] font-medium text-foreground no-underline transition-colors hover:bg-foreground hover:text-background'
+            >
+              Open in Helix ↗
+            </a>
+            {hostProject.data.homepage && (
+              <a
+                href={hostProject.data.homepage}
+                target='_blank'
+                rel='noopener noreferrer'
+                class='inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-[11px] text-muted-foreground no-underline transition-colors hover:border-foreground hover:text-foreground'
+              >
+                Source ↗
+              </a>
+            )}
+          </div>
+        </div>
+      )
+    }
+    {!!headings.length && <TOC {headings} />}
+  </Fragment>
 
-  {/* Hero includes the picture, info bar (lang, time, etc.), the title and the description */}
-  <Hero {data} {remarkPluginFrontmatter} slot='header' />
+  {/* Clean Editorial Blog Hero */}
+  <BlogHero {data} {remarkPluginFrontmatter} {hostProject} slot='header' />
 
   <slot />
 
   <Fragment slot='bottom'>
+    {/* Host Project Footer Banner */}
+    {
+      hostProject && hostSlug && (
+        <div class='mb-6 flex flex-col justify-between gap-4 rounded-xl border border-border/80 bg-card/50 p-5 sm:flex-row sm:items-center'>
+          <div>
+            <div class='font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground'>
+              Linked Host Project · {hostProject.data.category}
+            </div>
+            <div class='mt-1 text-base font-semibold text-foreground'>
+              {hostProject.data.projectName}
+            </div>
+            <p class='mt-0.5 text-sm text-muted-foreground'>{hostProject.data.description}</p>
+          </div>
+          <a
+            href={`/projects?project=${encodeURIComponent(hostSlug)}`}
+            class='inline-flex shrink-0 items-center gap-2 rounded-full border border-foreground bg-foreground px-4 py-2 text-xs font-medium text-background no-underline transition-opacity hover:opacity-85'
+          >
+            <span>Explore Project</span>
+            <span aria-hidden='true'>↗</span>
+          </a>
+        </div>
+      )
+    }
+
     {/* Copyright */}
     <Copyright {data} />
     {/* Article recommend */}
-    <ArticleBottom collections={posts} {id} class='mt-3 sm:mt-6' />
+    <ArticleBottom collections={posts} {id} class='mt-4 sm:mt-6' />
     {/* Comment */}
-    {!isDraft && enableComment && <Comment class='mt-3 sm:mt-6' />}
+    {!isDraft && enableComment && <Comment class='mt-4 sm:mt-6' />}
   </Fragment>
 
   <slot name='bottom-sidebar' slot='bottom-sidebar' />

@@ -1,17 +1,19 @@
 ---
 projectName: Mango
-description: 'A proficient fs-based script manager.'
+description: 'A proficient fs-based script manager with modular submodule architecture.'
+category: 'Tools'
+year: '2025'
 tags:
-  - Mango
-  - Commandline
+  - CLI Tools
   - System Tools
+  - Modular
 icon: { src: './logo.png' }
 gradient: { from: '#f6d365', to: '#fda085' }
-blogpage: http://norb.space/blog/introducing-mango
+blogpage: /blog/introducing-mango
 homepage: https://github.com/RayZh-hs/Mango
-demo: null
+order: 7
 ---
 
-# Mango
+Mango is a lightweight, filesystem-driven script management system built to organize everyday developer workflows, templates, and reusable command submodules.
 
-A proficient fs-based script manager.
+Designed to stay completely transparent on disk while scaling cleanly from personal scripts to shared module repositories.

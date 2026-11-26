@@ -1,35 +1,1636 @@
 ---
-// src/pages/projects.astro
-import { getCollection } from 'astro:content';
-import PageLayout from '@/layouts/CommonPage.astro';
-import ProjectCard from '@/components/projects/ProjectCard.astro';
-// import ProjectInfo from '@/components/projects/ProjectInfo.astro'; // Keep for later modal integration
+import { getImage } from 'astro:assets'
+import { getCollection, type CollectionEntry } from 'astro:content'
+import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
+import PageLayout from '@/layouts/BaseLayout.astro'
+import { getRelatedBlogsForProject, normalizeProjectSlug } from '@/lib/content-links'
+import { getGalleryItems } from '@/server/galleryService'
 
-// Fetch all project entries from the content collection
-const allProjects = await getCollection('projects', () => {
-  // Optional: Filter out drafts or future-dated projects if you add such fields
-  return true; // return data.draft !== true;
-});
+const allProjectsRaw = await getCollection('projects')
+allProjectsRaw.sort((a, b) => {
+  const orderA = a.data.order ?? Infinity
+  const orderB = b.data.order ?? Infinity
+  if (orderA !== orderB) return orderA - orderB
+  return a.data.projectName.localeCompare(b.data.projectName)
+})
 
-allProjects.sort((a, b) => {
-    const orderA = a.data.order ?? Infinity;
-    const orderB = b.data.order ?? Infinity;
-    if (orderA !== orderB) return orderA - orderB;
-    return a.data.projectName.localeCompare(b.data.projectName);
-});
+const allBlogPosts = sortMDByDate(await getBlogCollection()) as CollectionEntry<'blog'>[]
+const galleryItems = await getGalleryItems()
+const galleryPreviewStrip = galleryItems.slice(0, 6).map((item) => ({
+  title: item.title,
+  src: item.cover.images.small.src,
+  location: item.location ?? ''
+}))
 
-const DIALOG_ID = 'project-info-dialog'; // Will be used for the modal
+const projectsData = await Promise.all(
+  allProjectsRaw.map(async (entry, idx) => {
+    const slug = normalizeProjectSlug(entry)
+    const relatedBlogs = getRelatedBlogsForProject(entry, allBlogPosts).map((p) => ({
+      id: p.id,
+      title: p.data.title,
+      description: p.data.description,
+      date: p.data.publishDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit'
+      })
+    }))
+
+    const iconLight = entry.data.icon
+      ? await getImage({ src: entry.data.icon.src, width: 320, format: 'webp' })
+      : null
+    const iconDark = entry.data.icon?.dark
+      ? await getImage({ src: entry.data.icon.dark, width: 320, format: 'webp' })
+      : null
+    const coverImg = entry.data.cover
+      ? await getImage({ src: entry.data.cover, width: 800, format: 'webp', quality: 82 })
+      : null
+
+    const rendered = await entry.render()
+
+    return {
+      index: idx,
+      numeral: String(idx + 1).padStart(2, '0'),
+      slug,
+      name: entry.data.projectName,
+      description: entry.data.description,
+      category: entry.data.category,
+      year: entry.data.year ?? '',
+      tags: entry.data.tags ?? [],
+      gradientFrom: entry.data.gradient.from,
+      gradientTo: entry.data.gradient.to,
+      iconLightSrc: iconLight?.src ?? '',
+      iconDarkSrc: iconDark?.src ?? '',
+      iconScale: entry.data.icon?.scale ?? 1,
+      coverSrc: coverImg?.src ?? '',
+      homepage: entry.data.homepage ?? '',
+      demopage: entry.data.demopage ?? '',
+      blogpage: entry.data.blogpage ?? '',
+      relatedBlogs,
+      isPhotography: slug === 'photography',
+      Content: rendered.Content
+    }
+  })
+)
+
+const categories = ['All', 'Systems & Compilers', 'AI & Vision', 'Tools', 'Creative']
+const categoryCounts = new Map<string, number>()
+categoryCounts.set('All', projectsData.length)
+for (const p of projectsData) {
+  categoryCounts.set(p.category, (categoryCounts.get(p.category) ?? 0) + 1)
+}
+
+const allUniqueTags = Array.from(
+  new Set(projectsData.flatMap((p) => p.tags))
+).slice(0, 12)
+
+// Serialize lightweight client metadata (Markdown intros stay rendered in DOM slots)
+const clientProjects = projectsData.map(({ Content: _c, ...rest }) => rest)
+
+const meta = {
+  title: 'Projects',
+  description: 'A 3D helical showcase of development, AI research, compiler, and creative projects by Norb.'
+}
 ---
 
-<PageLayout title='Projects' info={{ slug: '/projects', hideComment: true }} useSidebar={false}>
-  <p class="mb-8 text-lg text-muted-foreground">
-    Here are some of the projects I've worked on. Click on a card to see more details or run them live.
-  </p>
+<PageLayout
+  {meta}
+  fullBleed={true}
+  floatingHeader={true}
+  hideFooter={true}
+  enableCursor={true}
+>
+  <main id='projects-helix-app' class='helix-app' data-view-mode='balanced'>
+    {/* Live Synchronized 3D Helical Spine & Orbital Depth Canvas */}
+    <canvas id='helix-bg-canvas' class='helix-bg-canvas' aria-hidden='true'></canvas>
 
-  <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-    {/* Render each project card */}
-    {allProjects.map(project => (
-      <ProjectCard project={project} dialogId={DIALOG_ID} />
-    ))}
-  </div>
+    {/* ============================================================
+        LHS: ZOOM-OUT & FILTERING PANEL
+        Hovering or toggling LHS zooms out the 3D helix and exposes
+        category/tag filtering & quick spiral index.
+       ============================================================ */}
+    <aside id='helix-lhs' class='helix-lhs' aria-label='Project filters'>
+      <div class='lhs-inner'>
+        <div class='flex items-center justify-between gap-2'>
+          <div>
+            <p class='font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground'>
+              Archive · Helix
+            </p>
+            <h1 class='mt-1 text-xl font-semibold tracking-[-0.03em] text-foreground'>
+              Projects
+            </h1>
+          </div>
+
+          <button
+            id='lhs-zoom-toggle'
+            type='button'
+            class='lhs-zoom-btn'
+            title='Zoom out helix & toggle filter drawer (F)'
+            data-cursor='link'
+          >
+            <span class='lhs-zoom-dot' aria-hidden='true'></span>
+            <span id='lhs-zoom-label'>Zoom Out</span>
+          </button>
+        </div>
+
+        {/* Category Filter List */}
+        <div class='mt-6'>
+          <div class='mb-2.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground'>
+            Categories
+          </div>
+          <div id='lhs-categories' class='flex flex-col gap-1' role='radiogroup' aria-label='Filter by category'>
+            {
+              categories.map((cat) => (
+                <button
+                  type='button'
+                  class:list={['lhs-cat-btn', cat === 'All' && 'is-active']}
+                  data-category={cat}
+                  data-cursor='link'
+                >
+                  <span>{cat}</span>
+                  <span class='font-mono text-[11px] opacity-55'>{categoryCounts.get(cat) ?? 0}</span>
+                </button>
+              ))
+            }
+          </div>
+        </div>
+
+        {/* Tag Filter Chips (revealed prominently when LHS zoomed-out / active) */}
+        <div class='lhs-expand-section mt-6'>
+          <div class='mb-2.5 flex items-center justify-between'>
+            <span class='font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground'>
+              Tags
+            </span>
+            <button
+              id='lhs-clear-filters'
+              type='button'
+              class='hidden font-mono text-[10px] uppercase tracking-[0.14em] text-foreground underline underline-offset-4'
+              data-cursor='link'
+            >
+              Reset
+            </button>
+          </div>
+          <div id='lhs-tags' class='flex flex-wrap gap-1.5'>
+            {
+              allUniqueTags.map((tag) => (
+                <button type='button' class='lhs-tag-chip' data-tag={tag} data-cursor='link'>
+                  {tag}
+                </button>
+              ))
+            }
+          </div>
+
+          {/* Quick Jump Spiral Index */}
+          <div class='mt-6'>
+            <div class='mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground'>
+              Spiral Index
+            </div>
+            <div id='lhs-index-list' class='lhs-index-list'>
+              {
+                projectsData.map((p) => (
+                  <button
+                    type='button'
+                    class='lhs-index-item'
+                    data-jump-slug={p.slug}
+                    data-cursor='link'
+                  >
+                    <span class='font-mono text-[10px] opacity-45'>{p.numeral}</span>
+                    <span class='truncate'>{p.name}</span>
+                  </button>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    {/* ============================================================
+        CENTER STAGE: 3D HELIX OF PROJECTS
+       ============================================================ */}
+    <section id='helix-viewport' class='helix-viewport' aria-label='3D project helix'>
+      <div id='helix-camera' class='helix-camera'>
+        <div id='helix-ring' class='helix-ring'>
+          {
+            projectsData.map((p) => (
+              <article
+                class='helix-card'
+                data-slug={p.slug}
+                data-category={p.category}
+                data-tags={p.tags.join('|')}
+                tabindex='0'
+                role='button'
+                aria-label={`Select project ${p.name}`}
+                data-cursor='link'
+              >
+                <div
+                  class='helix-card-accent'
+                  style={`background: linear-gradient(90deg, ${p.gradientFrom}, ${p.gradientTo});`}
+                  aria-hidden='true'
+                />
+
+                <div class='helix-card-top'>
+                  <span class='font-mono text-[10px] uppercase tracking-[0.18em] opacity-50'>
+                    {p.numeral} · {p.category}
+                  </span>
+                  {p.year && <span class='font-mono text-[10px] opacity-45'>{p.year}</span>}
+                </div>
+
+                {/* Visual Emblem / Cover */}
+                <div class='helix-card-visual'>
+                  {p.coverSrc ? (
+                    <img
+                      src={p.coverSrc}
+                      alt={p.name}
+                      class='h-full w-full rounded-lg object-cover'
+                      loading='eager'
+                    />
+                  ) : p.iconLightSrc ? (
+                    <div class='flex h-full w-full items-center justify-center p-4'>
+                      <img
+                        src={p.iconLightSrc}
+                        alt={p.name}
+                        class:list={[
+                          'max-h-full max-w-full object-contain',
+                          p.iconDarkSrc && 'dark:hidden'
+                        ]}
+                        style={`transform: scale(${p.iconScale});`}
+                        loading='eager'
+                      />
+                      {p.iconDarkSrc && (
+                        <img
+                          src={p.iconDarkSrc}
+                          alt={p.name}
+                          class='hidden max-h-full max-w-full object-contain dark:block'
+                          style={`transform: scale(${p.iconScale});`}
+                          loading='eager'
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div class='flex h-full w-full items-center justify-center font-mono text-2xl opacity-30'>
+                      {p.numeral}
+                    </div>
+                  )}
+                </div>
+
+                <div class='helix-card-body'>
+                  <h2 class='text-lg font-semibold tracking-[-0.025em] text-foreground'>
+                    {p.name}
+                  </h2>
+                  <p class='mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground'>
+                    {p.description}
+                  </p>
+                </div>
+
+                <div class='helix-card-foot'>
+                  <div class='flex flex-wrap gap-1'>
+                    {p.tags.slice(0, 2).map((t) => (
+                      <span class='rounded-full border border-border/80 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground'>
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                  {p.relatedBlogs.length > 0 && (
+                    <span class='font-mono text-[10px] text-foreground/70'>
+                      {p.relatedBlogs.length} {p.relatedBlogs.length === 1 ? 'blog' : 'blogs'}
+                    </span>
+                  )}
+                </div>
+              </article>
+            ))
+          }
+        </div>
+      </div>
+
+      {/* Empty Filter State */}
+      <div id='helix-empty' class='helix-empty hidden'>
+        <p class='font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground'>
+          No projects match this filter
+        </p>
+        <button
+          id='helix-empty-reset'
+          type='button'
+          class='mt-4 rounded-full border border-foreground px-4 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-foreground hover:text-background'
+          data-cursor='link'
+        >
+          Show All Projects
+        </button>
+      </div>
+
+      {/* Bottom Minimal Navigation HUD */}
+      <div class='helix-hud'>
+        <button id='helix-prev' type='button' class='hud-step-btn' aria-label='Previous project' data-cursor='link'>
+          ↑
+        </button>
+        <span id='helix-counter' class='font-mono text-xs tracking-[0.18em] text-foreground/75'>
+          01 / {String(projectsData.length).padStart(2, '0')}
+        </span>
+        <button id='helix-next' type='button' class='hud-step-btn' aria-label='Next project' data-cursor='link'>
+          ↓
+        </button>
+        <span class='mx-2 hidden h-3 w-px bg-border sm:inline-block' aria-hidden='true'></span>
+        <span class='hidden font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground sm:inline'>
+          Scroll · Drag · Click to explore
+        </span>
+      </div>
+    </section>
+
+    {/* ============================================================
+        RHS: EXPANDED PROJECT INSPECTOR
+        Expands active project with Introduction, Related Blogs
+        prompt, Photography strip (if creative), and Links.
+       ============================================================ */}
+    <aside id='helix-rhs' class='helix-rhs' aria-label='Selected project details'>
+      <div class='rhs-inner'>
+        {/* Top Accent Hairline */}
+        <div id='rhs-accent-bar' class='rhs-accent-bar' aria-hidden='true'></div>
+
+        {/* Header Row */}
+        <div class='flex items-center justify-between gap-3'>
+          <div class='flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground'>
+            <span id='rhs-numeral'>01</span>
+            <span class='opacity-35'>/</span>
+            <span id='rhs-category'>Systems &amp; Compilers</span>
+            <span id='rhs-year-wrap' class='opacity-55'></span>
+          </div>
+
+          <button
+            id='rhs-expand-toggle'
+            type='button'
+            class='font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground'
+            data-cursor='link'
+          >
+            Expand ↗
+          </button>
+        </div>
+
+        {/* Project Visual Header */}
+        <div id='rhs-visual-box' class='rhs-visual-box mt-4'>
+          <img id='rhs-cover-img' class='hidden h-full w-full object-cover' alt='' />
+          <div id='rhs-icon-wrap' class='flex h-full w-full items-center justify-center p-6'>
+            <img id='rhs-icon-light' class='max-h-full max-w-full object-contain' alt='' />
+            <img id='rhs-icon-dark' class='hidden max-h-full max-w-full object-contain' alt='' />
+          </div>
+        </div>
+
+        {/* Title & Tagline */}
+        <h2 id='rhs-title' class='mt-5 text-2xl font-semibold tracking-[-0.03em] text-foreground sm:text-3xl'>
+          {projectsData[0]?.name}
+        </h2>
+        <p id='rhs-tagline' class='mt-2 text-sm leading-relaxed text-muted-foreground'>
+          {projectsData[0]?.description}
+        </p>
+
+        {/* Tags */}
+        <div id='rhs-tags' class='mt-4 flex flex-wrap gap-1.5'></div>
+
+        {/* Interactive Prompt Tabs: Introduction vs Related Blogs */}
+        <div class='mt-6 flex items-center gap-1 border-b border-border/80' role='tablist'>
+          <button
+            id='rhs-tab-intro'
+            type='button'
+            role='tab'
+            aria-selected='true'
+            class='rhs-tab is-active'
+            data-rhs-tab='intro'
+            data-cursor='link'
+          >
+            Introduction
+          </button>
+          <button
+            id='rhs-tab-blogs'
+            type='button'
+            role='tab'
+            aria-selected='false'
+            class='rhs-tab'
+            data-rhs-tab='blogs'
+            data-cursor='link'
+          >
+            <span>Related Blogs</span>
+            <span id='rhs-blog-count-badge' class='rhs-tab-badge'>0</span>
+          </button>
+        </div>
+
+        {/* Scrollable Content Region */}
+        <div class='rhs-scroll-body mt-4'>
+          {/* Tab Panel 1: Project Introduction (server-rendered markdown per project) */}
+          <div id='rhs-panel-intro' role='tabpanel'>
+            <div id='rhs-intro-slots' class='rhs-markdown-intro text-sm leading-relaxed text-foreground/80'>
+              {
+                projectsData.map((p) => (
+                  <div class='rhs-intro-slot hidden' data-intro-slug={p.slug}>
+                    <p.Content />
+                  </div>
+                ))
+              }
+            </div>
+
+            {/* Curated Photography Filmstrip (only shown when Photography project is active) */}
+            <div id='rhs-gallery-strip' class='mt-5 hidden'>
+              <div class='mb-2 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground'>
+                <span>Selected Frames</span>
+                <a href='/gallery' class='text-foreground underline underline-offset-4' data-cursor='link'>
+                  Full Gallery ↗
+                </a>
+              </div>
+              <div class='grid grid-cols-3 gap-2'>
+                {
+                  galleryPreviewStrip.map((frame) => (
+                    <a
+                      href='/gallery'
+                      class='group relative aspect-[4/3] overflow-hidden rounded-md border border-border/70 bg-muted'
+                      title={frame.title}
+                      data-cursor='link'
+                    >
+                      <img
+                        src={frame.src}
+                        alt={frame.title}
+                        class='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                        loading='lazy'
+                      />
+                    </a>
+                  ))
+                }
+              </div>
+            </div>
+
+            {/* Inline Prompt to check Related Blogs when available */}
+            <div id='rhs-blog-prompt' class='mt-5 hidden rounded-xl border border-border/80 bg-muted/35 p-3.5'>
+              <div class='flex items-center justify-between gap-3'>
+                <div>
+                  <div class='font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground'>
+                    Deep Dive Available
+                  </div>
+                  <div id='rhs-blog-prompt-text' class='mt-0.5 text-xs font-medium text-foreground'>
+                    Read related technical notes
+                  </div>
+                </div>
+                <button
+                  id='rhs-jump-blogs-tab'
+                  type='button'
+                  class='shrink-0 rounded-full border border-foreground/30 px-3 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-foreground hover:text-background'
+                  data-cursor='link'
+                >
+                  View Blogs →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Tab Panel 2: Related Blogs List */}
+          <div id='rhs-panel-blogs' role='tabpanel' class='hidden'>
+            <div id='rhs-blogs-list' class='flex flex-col gap-3'></div>
+          </div>
+        </div>
+
+        {/* Possible Links Bar */}
+        <div id='rhs-links-bar' class='mt-5 flex flex-wrap items-center gap-2.5 border-t border-border/80 pt-4'></div>
+      </div>
+    </aside>
+  </main>
+
+  {/* Serialized Data Payload */}
+  <script
+    is:inline
+    id='projects-helix-data'
+    type='application/json'
+    set:html={JSON.stringify(clientProjects)}
+  />
 </PageLayout>
+
+<style is:global>
+  .helix-app {
+    position: relative;
+    width: 100vw;
+    height: 100svh;
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+    background: hsl(var(--background));
+    user-select: none;
+  }
+
+  .helix-bg-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* LHS Filter & Zoom-out Zone */
+  .helix-lhs {
+    position: fixed;
+    left: 1.5rem;
+    top: 5.25rem;
+    bottom: 1.5rem;
+    width: 262px;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    transition:
+      width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.3s ease,
+      border-color 0.3s ease;
+  }
+  .helix-app[data-view-mode='lhs-zoom'] .helix-lhs {
+    width: 304px;
+  }
+  .lhs-inner {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem;
+    border-radius: 1rem;
+    border: 1px solid hsl(var(--border) / 0.72);
+    background: hsl(var(--background) / 0.74);
+    backdrop-filter: blur(16px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .helix-app[data-view-mode='lhs-zoom'] .lhs-inner {
+    border-color: hsl(var(--foreground) / 0.32);
+    background: hsl(var(--background) / 0.92);
+  }
+
+  .lhs-zoom-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.32rem 0.68rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border));
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .lhs-zoom-btn:hover,
+  .helix-app[data-view-mode='lhs-zoom'] .lhs-zoom-btn {
+    border-color: hsl(var(--foreground));
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+  .lhs-zoom-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+    background: currentColor;
+  }
+
+  .lhs-cat-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.55rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .lhs-cat-btn:hover {
+    color: hsl(var(--foreground));
+    background: hsl(var(--muted) / 0.6);
+  }
+  .lhs-cat-btn.is-active {
+    color: hsl(var(--background));
+    background: hsl(var(--foreground));
+  }
+
+  .lhs-expand-section {
+    opacity: 0.72;
+    transition: opacity 0.3s ease;
+  }
+  .helix-app[data-view-mode='lhs-zoom'] .lhs-expand-section {
+    opacity: 1;
+  }
+
+  .lhs-tag-chip {
+    padding: 0.24rem 0.55rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border));
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-family: var(--font-mono);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .lhs-tag-chip:hover {
+    border-color: hsl(var(--foreground) / 0.5);
+    color: hsl(var(--foreground));
+  }
+  .lhs-tag-chip.is-active {
+    border-color: hsl(var(--foreground));
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+
+  .lhs-index-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .lhs-index-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.34rem 0.55rem;
+    border-radius: 0.45rem;
+    border: none;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.78rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  .lhs-index-item:hover {
+    color: hsl(var(--foreground));
+    background: hsl(var(--muted) / 0.55);
+  }
+  .lhs-index-item.is-active {
+    color: hsl(var(--foreground));
+    font-weight: 600;
+    background: hsl(var(--muted) / 0.85);
+  }
+  .lhs-index-item.is-filtered-out {
+    display: none;
+  }
+
+  /* CENTER: 3D Helix Stage */
+  .helix-viewport {
+    position: relative;
+    flex: 1 1 auto;
+    height: 100%;
+    z-index: 10;
+    perspective: 1350px;
+    perspective-origin: 50% 50%;
+    overflow: hidden;
+    touch-action: none;
+  }
+  .helix-camera {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    will-change: transform;
+  }
+  .helix-ring {
+    position: relative;
+    width: 0;
+    height: 0;
+    transform-style: preserve-3d;
+  }
+
+  .helix-card {
+    position: absolute;
+    width: 268px;
+    height: 310px;
+    left: -134px;
+    top: -155px;
+    border-radius: 1rem;
+    border: 1px solid hsl(var(--border) / 0.88);
+    background: hsl(var(--card) / 0.92);
+    backdrop-filter: blur(12px);
+    padding: 1rem 1.05rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    cursor: pointer;
+    backface-visibility: hidden;
+    box-shadow: 0 18px 42px -18px rgba(0, 0, 0, 0.16);
+    will-change: transform, opacity;
+    transition:
+      border-color 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  .dark .helix-card {
+    box-shadow: 0 22px 48px -18px rgba(0, 0, 0, 0.65);
+  }
+  .helix-card.is-active {
+    border-color: hsl(var(--foreground) / 0.55);
+    box-shadow: 0 28px 64px -20px rgba(0, 0, 0, 0.24);
+  }
+  .dark .helix-card.is-active {
+    box-shadow: 0 28px 68px -18px rgba(0, 0, 0, 0.85);
+  }
+  .helix-card.is-hidden-card {
+    pointer-events: none;
+    opacity: 0 !important;
+    visibility: hidden;
+  }
+  .helix-card-accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2.5px;
+    opacity: 0.7;
+  }
+  .helix-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .helix-card-visual {
+    margin-top: 0.75rem;
+    height: 128px;
+    border-radius: 0.65rem;
+    background: hsl(var(--muted) / 0.45);
+    overflow: hidden;
+  }
+  .helix-card-body {
+    margin-top: 0.8rem;
+    flex: 1 1 auto;
+  }
+  .helix-card-foot {
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .helix-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 15;
+  }
+  .helix-empty.hidden {
+    display: none !important;
+  }
+
+  /* Bottom HUD */
+  .helix-hud {
+    position: fixed;
+    left: calc(50% - 62px);
+    bottom: 1.5rem;
+    transform: translateX(-50%);
+    z-index: 25;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border) / 0.85);
+    background: hsl(var(--background) / 0.84);
+    backdrop-filter: blur(14px);
+    transition: left 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .helix-app[data-view-mode='rhs-expand'] .helix-hud {
+    left: calc(50% - 115px);
+  }
+  .helix-app[data-view-mode='lhs-zoom'] .helix-hud {
+    left: calc(50% + 18px);
+  }
+  .hud-step-btn {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border));
+    background: transparent;
+    color: hsl(var(--foreground));
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .hud-step-btn:hover {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+    border-color: hsl(var(--foreground));
+  }
+
+  /* RHS Expanded Project Panel */
+  .helix-rhs {
+    position: fixed;
+    right: 1.5rem;
+    top: 5.25rem;
+    bottom: 1.5rem;
+    width: min(410px, 34vw);
+    z-index: 22;
+    transition:
+      width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.35s ease,
+      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .helix-app[data-view-mode='rhs-expand'] .helix-rhs {
+    width: min(520px, 44vw);
+  }
+  .helix-app[data-view-mode='lhs-zoom'] .helix-rhs {
+    opacity: 0.48;
+    transform: translateX(18px) scale(0.97);
+  }
+  .rhs-inner {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 1.45rem 1.5rem;
+    border-radius: 1.15rem;
+    border: 1px solid hsl(var(--border) / 0.85);
+    background: hsl(var(--card) / 0.86);
+    backdrop-filter: blur(18px);
+    overflow: hidden;
+  }
+  .helix-app[data-view-mode='rhs-expand'] .rhs-inner {
+    border-color: hsl(var(--foreground) / 0.36);
+    background: hsl(var(--card) / 0.96);
+  }
+  .rhs-accent-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2.5px;
+    transition: background 0.35s ease;
+  }
+  .rhs-visual-box {
+    height: 146px;
+    border-radius: 0.75rem;
+    border: 1px solid hsl(var(--border) / 0.6);
+    background: hsl(var(--muted) / 0.42);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .rhs-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.25rem;
+    margin-right: 1.1rem;
+    border: none;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  .rhs-tab:hover,
+  .rhs-tab.is-active {
+    color: hsl(var(--foreground));
+  }
+  .rhs-tab.is-active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1.5px;
+    background: hsl(var(--foreground));
+  }
+  .rhs-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.15rem;
+    height: 1.15rem;
+    padding: 0 0.3rem;
+    border-radius: 9999px;
+    background: hsl(var(--muted));
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: hsl(var(--foreground));
+  }
+  .rhs-scroll-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+  .rhs-markdown-intro p {
+    margin-bottom: 0.85rem;
+  }
+  .rhs-markdown-intro p:last-child {
+    margin-bottom: 0;
+  }
+  .rhs-blog-card {
+    display: block;
+    padding: 0.9rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid hsl(var(--border) / 0.85);
+    background: hsl(var(--background) / 0.65);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.22s ease, transform 0.22s ease;
+  }
+  .rhs-blog-card:hover {
+    border-color: hsl(var(--foreground) / 0.5);
+    transform: translateY(-1px);
+    color: inherit;
+  }
+  .rhs-link-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+    font-size: 0.76rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+  }
+  .rhs-link-primary:hover {
+    opacity: 0.86;
+    color: hsl(var(--background));
+  }
+  .rhs-link-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border));
+    background: transparent;
+    color: hsl(var(--foreground));
+    font-size: 0.76rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+  .rhs-link-secondary:hover {
+    border-color: hsl(var(--foreground));
+    color: hsl(var(--foreground));
+  }
+
+  /* Responsive Tablet / Mobile */
+  @media (max-width: 1024px) {
+    .helix-app {
+      height: auto;
+      min-height: 100svh;
+      overflow-y: auto;
+      flex-direction: column;
+      padding: 5rem 1rem 3rem;
+      gap: 1rem;
+    }
+    .helix-lhs {
+      position: static;
+      width: 100% !important;
+      opacity: 1 !important;
+      transform: none !important;
+      order: 1;
+    }
+    .helix-lhs .lhs-inner {
+      padding: 0.9rem 1rem;
+    }
+    .helix-lhs .lhs-expand-section,
+    .helix-lhs #lhs-zoom-toggle {
+      display: none;
+    }
+    .helix-lhs #lhs-categories {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .helix-lhs .lhs-cat-btn {
+      width: auto;
+      padding: 0.32rem 0.7rem;
+      font-size: 0.74rem;
+      gap: 0.4rem;
+      border-radius: 9999px;
+      border-color: hsl(var(--border));
+    }
+    .helix-viewport {
+      height: 430px;
+      flex: none;
+      order: 2;
+    }
+    .helix-rhs {
+      position: static;
+      width: 100% !important;
+      opacity: 1 !important;
+      transform: none !important;
+      order: 3;
+    }
+    .helix-rhs #rhs-expand-toggle {
+      display: none;
+    }
+    .helix-hud {
+      position: absolute;
+      left: 50% !important;
+      bottom: 0.35rem;
+      transform: translateX(-50%);
+      margin: 0;
+    }
+  }
+</style>
+
+<script>
+  interface RelatedBlog {
+    id: string
+    title: string
+    description: string
+    date: string
+  }
+
+  interface HelixProject {
+    index: number
+    numeral: string
+    slug: string
+    name: string
+    description: string
+    category: string
+    year: string
+    tags: string[]
+    gradientFrom: string
+    gradientTo: string
+    iconLightSrc: string
+    iconDarkSrc: string
+    iconScale: number
+    coverSrc: string
+    homepage: string
+    demopage: string
+    blogpage: string
+    relatedBlogs: RelatedBlog[]
+    isPhotography: boolean
+  }
+
+  function initProjectsHelix() {
+    const dataEl = document.getElementById('projects-helix-data')
+    if (!dataEl) return
+    const allProjects: HelixProject[] = JSON.parse(dataEl.textContent || '[]')
+    if (!allProjects.length) return
+
+    const app = document.getElementById('projects-helix-app')!
+    const lhs = document.getElementById('helix-lhs')!
+    const rhs = document.getElementById('helix-rhs')!
+    const viewport = document.getElementById('helix-viewport')!
+    const cameraEl = document.getElementById('helix-camera')!
+    const emptyEl = document.getElementById('helix-empty')!
+    const counterEl = document.getElementById('helix-counter')!
+    const zoomToggleBtn = document.getElementById('lhs-zoom-toggle')!
+    const zoomLabelEl = document.getElementById('lhs-zoom-label')!
+    const clearFiltersBtn = document.getElementById('lhs-clear-filters')!
+    const emptyResetBtn = document.getElementById('helix-empty-reset')!
+    const rhsExpandBtn = document.getElementById('rhs-expand-toggle')!
+
+    const cardEls = new Map<string, HTMLElement>()
+    document.querySelectorAll<HTMLElement>('.helix-card').forEach((el) => {
+      if (el.dataset.slug) cardEls.set(el.dataset.slug, el)
+    })
+
+    const catBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('#lhs-categories .lhs-cat-btn'))
+    const tagBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('#lhs-tags .lhs-tag-chip'))
+    const indexBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('#lhs-index-list .lhs-index-item'))
+
+    // RHS elements
+    const rhsAccent = document.getElementById('rhs-accent-bar')!
+    const rhsNumeral = document.getElementById('rhs-numeral')!
+    const rhsCategory = document.getElementById('rhs-category')!
+    const rhsYearWrap = document.getElementById('rhs-year-wrap')!
+    const rhsCoverImg = document.getElementById('rhs-cover-img') as HTMLImageElement
+    const rhsIconWrap = document.getElementById('rhs-icon-wrap')!
+    const rhsIconLight = document.getElementById('rhs-icon-light') as HTMLImageElement
+    const rhsIconDark = document.getElementById('rhs-icon-dark') as HTMLImageElement
+    const rhsTitle = document.getElementById('rhs-title')!
+    const rhsTagline = document.getElementById('rhs-tagline')!
+    const rhsTags = document.getElementById('rhs-tags')!
+    const rhsBlogBadge = document.getElementById('rhs-blog-count-badge')!
+    const rhsGalleryStrip = document.getElementById('rhs-gallery-strip')!
+    const rhsBlogPrompt = document.getElementById('rhs-blog-prompt')!
+    const rhsBlogPromptText = document.getElementById('rhs-blog-prompt-text')!
+    const rhsBlogsList = document.getElementById('rhs-blogs-list')!
+    const rhsLinksBar = document.getElementById('rhs-links-bar')!
+    const tabIntro = document.getElementById('rhs-tab-intro')!
+    const tabBlogs = document.getElementById('rhs-tab-blogs')!
+    const panelIntro = document.getElementById('rhs-panel-intro')!
+    const panelBlogs = document.getElementById('rhs-panel-blogs')!
+    const introSlots = Array.from(document.querySelectorAll<HTMLElement>('.rhs-intro-slot'))
+
+    // State
+    let selectedCategory = 'All'
+    let selectedTag: string | null = null
+    let filtered: HelixProject[] = [...allProjects]
+    let targetIndex = 0
+    let smoothIndex = 0
+    let activeSlug = allProjects[0].slug
+    let viewMode: 'balanced' | 'lhs-zoom' | 'rhs-expand' = 'balanced'
+    let lhsPinnedZoom = false
+    let rhsPinnedExpand = false
+    let zoomProgress = 0
+    let cameraShiftX = 0
+    let mouseTiltX = 0
+    let mouseTiltY = 0
+    let targetTiltX = 0
+    let targetTiltY = 0
+
+    function setViewMode(mode: 'balanced' | 'lhs-zoom' | 'rhs-expand') {
+      viewMode = mode
+      app.dataset.viewMode = mode
+      zoomLabelEl.textContent = mode === 'lhs-zoom' ? 'Zoom In' : 'Zoom Out'
+      rhsExpandBtn.textContent = mode === 'rhs-expand' ? 'Compact ↙' : 'Expand ↗'
+    }
+
+    function setRhsTab(tab: 'intro' | 'blogs') {
+      const isIntro = tab === 'intro'
+      tabIntro.classList.toggle('is-active', isIntro)
+      tabBlogs.classList.toggle('is-active', !isIntro)
+      tabIntro.setAttribute('aria-selected', String(isIntro))
+      tabBlogs.setAttribute('aria-selected', String(!isIntro))
+      panelIntro.classList.toggle('hidden', !isIntro)
+      panelBlogs.classList.toggle('hidden', isIntro)
+    }
+
+    tabIntro.addEventListener('click', () => setRhsTab('intro'))
+    tabBlogs.addEventListener('click', () => setRhsTab('blogs'))
+    document.getElementById('rhs-jump-blogs-tab')?.addEventListener('click', () => setRhsTab('blogs'))
+
+    function updateRhs(project: HelixProject) {
+      activeSlug = project.slug
+      rhsAccent.style.background = `linear-gradient(90deg, ${project.gradientFrom}, ${project.gradientTo})`
+      rhsNumeral.textContent = project.numeral
+      rhsCategory.textContent = project.category
+      rhsYearWrap.textContent = project.year ? `· ${project.year}` : ''
+      rhsTitle.textContent = project.name
+      rhsTagline.textContent = project.description
+
+      // Visual (cover vs icon)
+      if (project.coverSrc) {
+        rhsCoverImg.src = project.coverSrc
+        rhsCoverImg.alt = project.name
+        rhsCoverImg.classList.remove('hidden')
+        rhsIconWrap.classList.add('hidden')
+      } else {
+        rhsCoverImg.classList.add('hidden')
+        rhsIconWrap.classList.remove('hidden')
+        rhsIconLight.src = project.iconLightSrc
+        rhsIconLight.alt = project.name
+        rhsIconLight.style.transform = `scale(${project.iconScale})`
+        if (project.iconDarkSrc) {
+          rhsIconDark.src = project.iconDarkSrc
+          rhsIconDark.alt = project.name
+          rhsIconDark.style.transform = `scale(${project.iconScale})`
+          rhsIconLight.classList.add('dark:hidden')
+          rhsIconDark.classList.remove('hidden')
+          rhsIconDark.classList.add('hidden', 'dark:block')
+        } else {
+          rhsIconLight.classList.remove('dark:hidden')
+          rhsIconDark.classList.add('hidden')
+          rhsIconDark.classList.remove('dark:block')
+        }
+      }
+
+      // Tags
+      rhsTags.innerHTML = project.tags
+        .map(
+          (t) =>
+            `<span class="rounded-full border border-border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">${t}</span>`
+        )
+        .join('')
+
+      // Show matching server-rendered markdown introduction slot
+      introSlots.forEach((slot) => {
+        slot.classList.toggle('hidden', slot.dataset.introSlug !== project.slug)
+      })
+
+      // Show curated photography strip for Photography creative project
+      rhsGalleryStrip.classList.toggle('hidden', !project.isPhotography)
+
+      // Related blogs list & prompt
+      const blogCount = project.relatedBlogs.length
+      rhsBlogBadge.textContent = String(blogCount)
+      if (blogCount > 0) {
+        rhsBlogPrompt.classList.remove('hidden')
+        rhsBlogPromptText.textContent =
+          blogCount === 1
+            ? `1 related blog post: "${project.relatedBlogs[0].title}"`
+            : `${blogCount} related blog posts documenting this build`
+        rhsBlogsList.innerHTML = project.relatedBlogs
+          .map(
+            (b) => `
+            <a href="/blog/${encodeURIComponent(b.id)}" class="rhs-blog-card" data-cursor="link">
+              <div class="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">${b.date}</div>
+              <div class="mt-1 flex items-baseline justify-between gap-3">
+                <span class="text-sm font-semibold text-foreground">${b.title}</span>
+                <span class="text-xs opacity-60">→</span>
+              </div>
+              <p class="mt-1 text-xs leading-relaxed text-muted-foreground">${b.description}</p>
+            </a>`
+          )
+          .join('')
+      } else {
+        rhsBlogPrompt.classList.add('hidden')
+        rhsBlogsList.innerHTML = `
+          <div class="rounded-xl border border-dashed border-border p-5 text-center">
+            <p class="text-xs text-muted-foreground">No dedicated blog post linked to ${project.name} yet.</p>
+            <a href="/blog" class="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-foreground underline underline-offset-4" data-cursor="link">
+              Browse all blog posts →
+            </a>
+          </div>`
+      }
+
+      // Action links
+      const links: string[] = []
+      if (project.demopage) {
+        const isInternal = project.demopage.startsWith('/')
+        links.push(
+          `<a href="${project.demopage}" ${isInternal ? '' : 'target="_blank" rel="noopener noreferrer"'} class="rhs-link-primary" data-cursor="link">${project.isPhotography ? 'Open Full Gallery ↗' : 'Live Demo ↗'}</a>`
+        )
+      }
+      if (project.relatedBlogs.length > 0) {
+        const firstBlog = project.relatedBlogs[0]
+        links.push(
+          `<a href="/blog/${encodeURIComponent(firstBlog.id)}" class="${links.length === 0 ? 'rhs-link-primary' : 'rhs-link-secondary'}" data-cursor="link">Read Blog →</a>`
+        )
+      } else if (project.blogpage) {
+        links.push(
+          `<a href="${project.blogpage}" class="${links.length === 0 ? 'rhs-link-primary' : 'rhs-link-secondary'}" data-cursor="link">Read Blog →</a>`
+        )
+      }
+      if (project.homepage) {
+        links.push(
+          `<a href="${project.homepage}" target="_blank" rel="noopener noreferrer" class="${links.length === 0 ? 'rhs-link-primary' : 'rhs-link-secondary'}" data-cursor="link">${project.isPhotography ? 'Pexels ↗' : 'GitHub ↗'}</a>`
+        )
+      }
+      rhsLinksBar.innerHTML = links.join('')
+
+      // Update LHS index active highlight & counter
+      indexBtns.forEach((b) => b.classList.toggle('is-active', b.dataset.jumpSlug === project.slug))
+      const pos = filtered.findIndex((p) => p.slug === project.slug)
+      counterEl.textContent = `${String(Math.max(1, pos + 1)).padStart(2, '0')} / ${String(filtered.length).padStart(2, '0')}`
+
+      // Sync URL without cluttering history
+      const url = new URL(window.location.href)
+      url.searchParams.set('project', project.slug)
+      window.history.replaceState({}, '', url.toString())
+    }
+
+    function applyFilters(keepSlug?: string) {
+      filtered = allProjects.filter((p) => {
+        const catOk = selectedCategory === 'All' || p.category === selectedCategory
+        const tagOk = !selectedTag || p.tags.includes(selectedTag)
+        return catOk && tagOk
+      })
+
+      const visibleSet = new Set(filtered.map((p) => p.slug))
+      cardEls.forEach((el, slug) => {
+        el.classList.toggle('is-hidden-card', !visibleSet.has(slug))
+      })
+      indexBtns.forEach((btn) => {
+        btn.classList.toggle('is-filtered-out', !visibleSet.has(btn.dataset.jumpSlug ?? ''))
+      })
+
+      const hasFilter = selectedCategory !== 'All' || !!selectedTag
+      clearFiltersBtn.classList.toggle('hidden', !hasFilter)
+      emptyEl.classList.toggle('hidden', filtered.length > 0)
+
+      if (filtered.length > 0) {
+        const preferred = keepSlug ? filtered.findIndex((p) => p.slug === keepSlug) : -1
+        targetIndex = preferred >= 0 ? preferred : 0
+        smoothIndex = Math.max(0, Math.min(filtered.length - 1, smoothIndex))
+        setRhsTab('intro')
+        updateRhs(filtered[targetIndex])
+      } else {
+        counterEl.textContent = '00 / 00'
+      }
+    }
+
+    function selectIndex(idx: number) {
+      if (!filtered.length) return
+      const clamped = ((idx % filtered.length) + filtered.length) % filtered.length
+      targetIndex = clamped
+      setRhsTab('intro')
+      updateRhs(filtered[clamped])
+    }
+
+    // Filter click events
+    catBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectedCategory = btn.dataset.category ?? 'All'
+        catBtns.forEach((b) => b.classList.toggle('is-active', b === btn))
+        applyFilters(activeSlug)
+      })
+    })
+
+    tagBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tag = btn.dataset.tag ?? ''
+        selectedTag = selectedTag === tag ? null : tag
+        tagBtns.forEach((b) => b.classList.toggle('is-active', b.dataset.tag === selectedTag))
+        applyFilters(activeSlug)
+      })
+    })
+
+    const resetFilters = () => {
+      selectedCategory = 'All'
+      selectedTag = null
+      catBtns.forEach((b) => b.classList.toggle('is-active', b.dataset.category === 'All'))
+      tagBtns.forEach((b) => b.classList.remove('is-active'))
+      applyFilters(activeSlug)
+    }
+    clearFiltersBtn.addEventListener('click', resetFilters)
+    emptyResetBtn.addEventListener('click', resetFilters)
+
+    indexBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = filtered.findIndex((p) => p.slug === btn.dataset.jumpSlug)
+        if (idx >= 0) {
+          selectIndex(idx)
+          lhsPinnedZoom = false
+          setViewMode('balanced')
+        }
+      })
+    })
+
+    // Card clicks: focus card & gently expand RHS
+    cardEls.forEach((el, slug) => {
+      el.addEventListener('click', () => {
+        const idx = filtered.findIndex((p) => p.slug === slug)
+        if (idx < 0) return
+        if (idx === targetIndex && viewMode !== 'rhs-expand') {
+          rhsPinnedExpand = true
+          lhsPinnedZoom = false
+          setViewMode('rhs-expand')
+        } else {
+          selectIndex(idx)
+          lhsPinnedZoom = false
+          setViewMode('balanced')
+        }
+      })
+    })
+
+    // LHS hover zooms out helix; RHS hover expands inspector (desktop)
+    lhs.addEventListener('mouseenter', () => {
+      if (window.innerWidth > 1024 && !rhsPinnedExpand) setViewMode('lhs-zoom')
+    })
+    lhs.addEventListener('mouseleave', () => {
+      if (window.innerWidth > 1024 && !lhsPinnedZoom && !rhsPinnedExpand) setViewMode('balanced')
+    })
+    rhs.addEventListener('mouseenter', () => {
+      if (window.innerWidth > 1024 && !lhsPinnedZoom) setViewMode('rhs-expand')
+    })
+    rhs.addEventListener('mouseleave', () => {
+      if (window.innerWidth > 1024 && !rhsPinnedExpand && !lhsPinnedZoom) setViewMode('balanced')
+    })
+
+    zoomToggleBtn.addEventListener('click', () => {
+      lhsPinnedZoom = !lhsPinnedZoom
+      if (lhsPinnedZoom) {
+        rhsPinnedExpand = false
+        setViewMode('lhs-zoom')
+      } else {
+        setViewMode('balanced')
+      }
+    })
+
+    rhsExpandBtn.addEventListener('click', () => {
+      rhsPinnedExpand = !rhsPinnedExpand
+      if (rhsPinnedExpand) {
+        lhsPinnedZoom = false
+        setViewMode('rhs-expand')
+      } else {
+        setViewMode('balanced')
+      }
+    })
+
+    // Wheel scrolling rotates & climbs the 3D helix
+    let wheelAccum = 0
+    viewport.addEventListener(
+      'wheel',
+      (e) => {
+        if (window.innerWidth <= 1024) return
+        e.preventDefault()
+        wheelAccum += e.deltaY
+        if (Math.abs(wheelAccum) >= 55) {
+          const dir = wheelAccum > 0 ? 1 : -1
+          wheelAccum = 0
+          selectIndex(targetIndex + dir)
+        }
+      },
+      { passive: false }
+    )
+
+    // Pointer drag on helix viewport
+    let dragging = false
+    let dragStartY = 0
+    let dragBaseIdx = 0
+    viewport.addEventListener('pointerdown', (e) => {
+      if ((e.target as HTMLElement).closest('button, a')) return
+      dragging = true
+      dragStartY = e.clientY
+      dragBaseIdx = targetIndex
+    })
+    window.addEventListener(
+      'pointermove',
+      (e) => {
+        targetTiltX = (e.clientX / window.innerWidth - 0.5) * 2
+        targetTiltY = (e.clientY / window.innerHeight - 0.5) * 2
+        if (!dragging || !filtered.length) return
+        const deltaCards = Math.round((dragStartY - e.clientY) / 110)
+        const nextIdx = ((dragBaseIdx + deltaCards) % filtered.length + filtered.length) % filtered.length
+        if (nextIdx !== targetIndex) selectIndex(nextIdx)
+      },
+      { passive: true }
+    )
+    window.addEventListener('pointerup', () => {
+      dragging = false
+    })
+
+    // Prev / Next buttons & keyboard arrows
+    document.getElementById('helix-prev')?.addEventListener('click', () => selectIndex(targetIndex - 1))
+    document.getElementById('helix-next')?.addEventListener('click', () => selectIndex(targetIndex + 1))
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'j') {
+        e.preventDefault()
+        selectIndex(targetIndex + 1)
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'k') {
+        e.preventDefault()
+        selectIndex(targetIndex - 1)
+      } else if (e.key.toLowerCase() === 'f') {
+        zoomToggleBtn.click()
+      } else if (e.key === 'Escape') {
+        lhsPinnedZoom = false
+        rhsPinnedExpand = false
+        setViewMode('balanced')
+      }
+    })
+
+    // Synchronized 3D Helical Spine Canvas Renderer
+    const bgCanvas = document.getElementById('helix-bg-canvas') as HTMLCanvasElement
+    const ctx = bgCanvas.getContext('2d')!
+    const resizeBg = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      bgCanvas.width = Math.round(bgCanvas.clientWidth * dpr)
+      bgCanvas.height = Math.round(bgCanvas.clientHeight * dpr)
+    }
+    resizeBg()
+    window.addEventListener('resize', resizeBg, { passive: true })
+
+    // Parse URL query (?project=<slug>&category=<cat>)
+    const params = new URLSearchParams(window.location.search)
+    const initialCat = params.get('category')
+    const initialProject = params.get('project')
+    if (initialCat) {
+      const matchedCatBtn = catBtns.find(
+        (b) => (b.dataset.category ?? '').toLowerCase() === initialCat.toLowerCase()
+      )
+      if (matchedCatBtn) {
+        selectedCategory = matchedCatBtn.dataset.category ?? 'All'
+        catBtns.forEach((b) => b.classList.toggle('is-active', b === matchedCatBtn))
+      }
+    }
+    applyFilters(initialProject ?? undefined)
+    if (initialProject) {
+      // Smoothly spotlight the linked project
+      smoothIndex = targetIndex
+      if (window.innerWidth > 1024) {
+        setViewMode('rhs-expand')
+      }
+    }
+
+    // Continuous 60fps 3D Helix Layout + Synchronized Canvas Spine Loop
+    const ANGLE_STEP = 0.72 // radians (~41 deg per project around helix)
+    let time = 0
+
+    function tick() {
+      time += 0.012
+      const isDesktop = window.innerWidth > 1024
+
+      // Shortest-path smooth interpolation along helix
+      smoothIndex += (targetIndex - smoothIndex) * 0.11
+      const targetZoom = viewMode === 'lhs-zoom' ? 1 : 0
+      zoomProgress += (targetZoom - zoomProgress) * 0.09
+
+      // Subtle lateral framing so center helix never collides with LHS/RHS panels
+      const targetShiftX = !isDesktop
+        ? 0
+        : viewMode === 'lhs-zoom'
+          ? 28
+          : viewMode === 'rhs-expand'
+            ? -115
+            : -68
+      cameraShiftX += (targetShiftX - cameraShiftX) * 0.09
+
+      mouseTiltX += (targetTiltX - mouseTiltX) * 0.06
+      mouseTiltY += (targetTiltY - mouseTiltY) * 0.06
+
+      const radius = (isDesktop ? 315 : 185) * (1 - zoomProgress * 0.08)
+      const pitchY = (isDesktop ? 132 : 104) * (1 - zoomProgress * 0.24)
+      const camZ = -zoomProgress * 560
+      const camRotY = mouseTiltX * 4.5 + zoomProgress * 8
+      const camRotX = -mouseTiltY * 3.5 - zoomProgress * 6
+
+      const camY = isDesktop ? 0 : -24
+      cameraEl.style.transform = `translate3d(${cameraShiftX.toFixed(1)}px, ${camY}px, ${camZ.toFixed(1)}px) rotateX(${camRotX.toFixed(2)}deg) rotateY(${camRotY.toFixed(2)}deg)`
+
+      // Position every visible project card along the 3D helix
+      const n = filtered.length
+      for (let i = 0; i < n; i++) {
+        const p = filtered[i]
+        const el = cardEls.get(p.slug)
+        if (!el) continue
+
+        const delta = i - smoothIndex
+        const angle = delta * ANGLE_STEP
+        const x = Math.sin(angle) * radius
+        const dist = Math.abs(delta)
+        const z = (Math.cos(angle) - 1) * radius - (isDesktop ? 0 : dist * 95)
+        const y = delta * pitchY
+        const rotY = (angle * 180) / Math.PI * 0.56
+
+        const scale = zoomProgress > 0.35
+          ? Math.max(0.74, 1 - dist * 0.045)
+          : Math.max(0.66, 1 - dist * 0.085)
+        const opacity = zoomProgress > 0.35
+          ? Math.max(0.42, 1 - dist * 0.085)
+          : Math.max(0.08, 1 - dist * (isDesktop ? 0.24 : 0.42))
+
+        el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${rotY.toFixed(2)}deg) scale(${scale.toFixed(3)})`
+        el.style.opacity = opacity.toFixed(3)
+        el.style.zIndex = String(Math.round(500 + z))
+        el.classList.toggle('is-active', Math.abs(i - targetIndex) < 0.01)
+      }
+
+      // Draw crisp minimalist 3D helical spine & depth guide rings on backdrop canvas
+      const w = bgCanvas.width
+      const h = bgCanvas.height
+      ctx.clearRect(0, 0, w, h)
+      const isDark = document.documentElement.classList.contains('dark')
+      const ink = isDark ? '245,245,245' : '18,18,18'
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const cx = w * 0.5 + cameraShiftX * dpr
+      const cy = h * 0.5
+      const fov = 1150 * dpr
+
+      const project3D = (x3: number, y3: number, z3: number) => {
+        const zs = (z3 + camZ) * dpr
+        const persp = fov / Math.max(220, fov - zs)
+        return [cx + x3 * dpr * persp, cy + y3 * dpr * persp, persp]
+      }
+
+      // Double-strand minimalist helix guide curve
+      for (const phase of [0, Math.PI]) {
+        ctx.beginPath()
+        ctx.strokeStyle = `rgba(${ink}, ${phase === 0 ? 0.13 : 0.06})`
+        ctx.lineWidth = (phase === 0 ? 1.25 : 0.9) * dpr
+        const samples = 96
+        for (let s = 0; s <= samples; s++) {
+          const d = (s / samples - 0.5) * Math.max(8, n + 2)
+          const a = d * ANGLE_STEP + phase + time * 0.08
+          const r = radius * (phase === 0 ? 0.98 : 0.62)
+          const [px, py] = project3D(Math.sin(a) * r, d * pitchY, (Math.cos(a) - 1) * r)
+          if (s === 0) ctx.moveTo(px, py)
+          else ctx.lineTo(px, py)
+        }
+        ctx.stroke()
+      }
+
+      // Horizontal helical rungs connecting the twin strands at each project step
+      ctx.strokeStyle = `rgba(${ink}, 0.075)`
+      ctx.lineWidth = 0.85 * dpr
+      for (let i = -2; i <= n + 1; i++) {
+        const d = i - smoothIndex
+        const a = d * ANGLE_STEP
+        const [x0, y0] = project3D(Math.sin(a) * radius * 0.96, d * pitchY, (Math.cos(a) - 1) * radius * 0.96)
+        const [x1, y1] = project3D(
+          Math.sin(a + Math.PI) * radius * 0.62,
+          d * pitchY,
+          (Math.cos(a + Math.PI) - 1) * radius * 0.62
+        )
+        ctx.beginPath()
+        ctx.moveTo(x0, y0)
+        ctx.lineTo(x1, y1)
+        ctx.stroke()
+      }
+
+      requestAnimationFrame(tick)
+    }
+
+    requestAnimationFrame(tick)
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initProjectsHelix)
+  } else {
+    initProjectsHelix()
+  }
+</script>

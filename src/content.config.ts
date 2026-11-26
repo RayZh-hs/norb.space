@@ -33,6 +33,7 @@ const blog = defineCollection({
         .optional(),
       tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
       language: z.string().optional(),
+      project: z.string().optional(),
       draft: z.boolean().default(false),
       // Integrations
       comment: z.boolean().default(true)
@@ -44,15 +45,18 @@ const projects = defineCollection({
   schema: ({ image }) => z.object({
     projectName: z.string(),
     description: z.string(),
+    category: z.enum(['Systems & Compilers', 'AI & Vision', 'Tools', 'Creative']).default('Tools'),
+    year: z.string().optional(),
     tags: z.array(z.string()).optional(),
     icon: z.object({
       src: image(), // Use Astro's image helper for the icon source
       dark: image().optional(), // Optional dark-mode variant; falls back to `src`
       scale: z.number().default(1), // Relative icon size, default 1
     }).optional(),
+    cover: image().optional(),
     homepage: z.string().url().optional(), // URL for the project's homepage
-    blogpage: z.string().url().optional(), // URL for a related blog post
-    demopage: z.string().url().optional(),
+    blogpage: z.string().optional(), // URL or internal path for a related blog post
+    demopage: z.string().optional(), // URL or internal path for a live demo or gallery
     gradient: z.object({
       from: z.string(),
       to: z.string(),
