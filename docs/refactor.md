@@ -31,7 +31,7 @@ Scrolling down, present an autobiography section. I would like to introduce myse
 - "Creative Designer": I am an amateur CG artist, and have many years of experience in 3D modeling and set-dressing. It is the love of CG art that first led me to seek deeper in Computer Vision and Graphics research, and this passion has been the driving force behind my academic pursuits.
 - "Photographer": I have a keen interest in photography, capturing moments and scenes during my travels. Some of these photos can be found in creative projects on this site.
 - "Botanist": I have a deep love for plants and nature. I care for many plants and frequently go on excursions to explore the natural world.
-- "Who I am": Like all of us, I am a complex individual with many facets. I continue to explore and grow and I am excited to share my journey with you through this website. (invert color)
+- "(I am) Who I am": Like all of us, I am a complex individual with many facets. I continue to explore and grow and I am excited to share my journey with you through this website. (invert color)
 
 I would like there to be a smooth scene morph between each section. It should be intriguing and visually appealing while always adhering to the minimalistic theme.
 

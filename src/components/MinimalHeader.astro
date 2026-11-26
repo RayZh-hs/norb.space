@@ -3,16 +3,24 @@ import config from '@/site-config'
 
 interface Props {
   floating?: boolean
+  transparent?: boolean
   invertedAware?: boolean
+  hideBrandInitially?: boolean
 }
 
-const { floating = false, invertedAware = false } = Astro.props
+const {
+  floating = false,
+  transparent = false,
+  invertedAware = false,
+  hideBrandInitially = false
+} = Astro.props
 const pathname = Astro.url.pathname
 
 const navItems = [
   { title: 'Home', link: '/' },
   { title: 'Blog', link: '/blog' },
-  { title: 'Projects', link: '/projects' }
+  { title: 'Projects', link: '/projects' },
+  { title: 'Creative', link: '/creative' }
 ]
 
 function isActive(link: string) {
@@ -23,31 +31,34 @@ function isActive(link: string) {
 
 <header
   id='site-header'
+  transition:name='site-header'
   class:list={[
-    'site-header z-40 transition-all duration-300',
+    'site-header z-40 border-b transition-[background-color,border-color,color] duration-300',
     floating
-      ? 'fixed inset-x-0 top-0 px-6 py-5 sm:px-10'
-      : 'sticky top-0 border-b border-border/60 bg-background/85 backdrop-blur-md',
+      ? 'fixed inset-x-0 top-0 border-transparent bg-transparent'
+      : transparent
+        ? 'sticky top-0 border-transparent bg-transparent'
+        : 'sticky top-0 border-border/50 bg-background/80 backdrop-blur-md',
+    transparent && 'header-transparent',
     invertedAware && 'header-invert-aware'
   ]}
 >
-  <div
-    class:list={[
-      'mx-auto flex items-center justify-between',
-      floating ? 'max-w-[90rem]' : 'max-w-[74rem] px-5 py-4 sm:px-8'
-    ]}
-  >
+  <div class='mx-auto flex h-16 w-full max-w-[78rem] items-center justify-between px-6 sm:px-10'>
     <a
+      id='header-brand-link'
       href='/'
       aria-label={config.title}
-      class='group inline-flex items-center gap-2.5 text-base font-medium tracking-[-0.02em] text-current no-underline'
+      data-hide-initially={hideBrandInitially ? 'true' : 'false'}
+      class:list={[
+        'header-brand-link group inline-flex items-baseline text-base leading-none tracking-[-0.025em] text-current no-underline',
+        hideBrandInitially && 'is-brand-hidden'
+      ]}
       data-cursor='link'
     >
-      <span
-        class='inline-block size-2.5 rounded-full border-[1.75px] border-current transition-transform duration-300 group-hover:scale-125'
-        aria-hidden='true'
-      ></span>
-      <span>Norb</span>
+      <span id='header-brand-norb' class='header-brand-norb font-semibold'>Norb</span><span
+        id='header-brand-suffix'
+        class='header-brand-suffix font-normal opacity-75'
+      >'s Space</span>
     </a>
 
     <nav aria-label='Primary' class='flex items-center gap-1 sm:gap-2'>
@@ -117,6 +128,23 @@ function isActive(link: string) {
   .site-header a:hover {
     color: currentColor;
   }
+  .header-brand-link {
+    white-space: nowrap;
+    transition: opacity 0.25s ease;
+  }
+  .header-brand-link.is-brand-hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .header-brand-norb,
+  .header-brand-suffix {
+    display: inline-block;
+  }
+  .site-header.header-transparent.is-scrolled {
+    background-color: hsl(var(--background) / 0.78);
+    backdrop-filter: blur(14px);
+    border-bottom-color: hsl(var(--border) / 0.45);
+  }
   :global(html.dark) #minimal-theme-toggle .theme-icon-sun {
     display: block;
   }
@@ -126,15 +154,130 @@ function isActive(link: string) {
 </style>
 
 <script>
-  const btn = document.getElementById('minimal-theme-toggle')
-  btn?.addEventListener('click', () => {
-    const isDark = document.documentElement.classList.contains('dark')
-    const next = isDark ? 'light' : 'dark'
+  let headerScrollHandler: (() => void) | null = null
+  let isThemeTransitioning = false
+
+  function applyTheme(next: 'light' | 'dark') {
     localStorage.setItem('theme', next)
     document.documentElement.classList.toggle('dark', next === 'dark')
     document
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute('content', next === 'dark' ? '#0b0b0b' : '#fafafa')
     window.dispatchEvent(new CustomEvent('norb:theme-change', { detail: { theme: next } }))
-  })
+  }
+
+  function toggleThemeWithCursorExpansion(e: MouseEvent, btn: HTMLButtonElement) {
+    if (isThemeTransitioning) return
+    const isDark = document.documentElement.classList.contains('dark')
+    const next: 'light' | 'dark' = isDark ? 'light' : 'dark'
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (prefersReduced) {
+      applyTheme(next)
+      return
+    }
+
+    const cursorApi = window.__norbCursor
+    const cursorState = cursorApi?.getState()
+    const btnRect = btn.getBoundingClientRect()
+
+    // Anchor expansion at the live cursor circle center when visible, else click/button center
+    let cx = btnRect.left + btnRect.width * 0.5
+    let cy = btnRect.top + btnRect.height * 0.5
+    let startRadius = 0
+
+    if (cursorState && cursorState.enabled && cursorState.visible && cursorState.x >= 0) {
+      cx = cursorState.x
+      cy = cursorState.y
+      startRadius = Math.max(8, cursorState.radius)
+    } else if (e.clientX > 0 || e.clientY > 0) {
+      cx = e.clientX
+      cy = e.clientY
+    }
+
+    const maxRadius =
+      Math.hypot(
+        Math.max(cx, window.innerWidth - cx),
+        Math.max(cy, window.innerHeight - cy)
+      ) + 16
+
+    const docWithVT = document as Document & {
+      startViewTransition?: (cb: () => void) => {
+        ready: Promise<void>
+        finished: Promise<void>
+      }
+    }
+
+    if (typeof docWithVT.startViewTransition === 'function') {
+      isThemeTransitioning = true
+      document.documentElement.classList.add('theme-transitioning')
+      cursorApi?.hideForTransition()
+
+      const transition = docWithVT.startViewTransition(() => {
+        applyTheme(next)
+      })
+
+      transition.ready
+        .then(() => {
+          document.documentElement.animate(
+            {
+              clipPath: [
+                `circle(${startRadius.toFixed(1)}px at ${cx.toFixed(1)}px ${cy.toFixed(1)}px)`,
+                `circle(${maxRadius.toFixed(1)}px at ${cx.toFixed(1)}px ${cy.toFixed(1)}px)`
+              ]
+            },
+            {
+              duration: 580,
+              easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+              pseudoElement: '::view-transition-new(root)'
+            }
+          )
+        })
+        .catch(() => {
+          // Ignore aborted view transitions
+        })
+
+      transition.finished.finally(() => {
+        document.documentElement.classList.remove('theme-transitioning')
+        cursorApi?.reemergeAfterTransition()
+        isThemeTransitioning = false
+      })
+    } else if (cursorApi) {
+      isThemeTransitioning = true
+      cursorApi.runFallbackExpansion(
+        cx,
+        cy,
+        () => applyTheme(next),
+        () => {
+          isThemeTransitioning = false
+        }
+      )
+    } else {
+      applyTheme(next)
+    }
+  }
+
+  function initHeader() {
+    const btn = document.getElementById('minimal-theme-toggle') as HTMLButtonElement | null
+    if (btn && btn.dataset.bound !== '1') {
+      btn.dataset.bound = '1'
+      btn.addEventListener('click', (e) => toggleThemeWithCursorExpansion(e, btn))
+    }
+
+    if (headerScrollHandler) {
+      window.removeEventListener('scroll', headerScrollHandler)
+      headerScrollHandler = null
+    }
+
+    const header = document.getElementById('site-header')
+    if (header?.classList.contains('header-transparent')) {
+      headerScrollHandler = () => {
+        header.classList.toggle('is-scrolled', window.scrollY > 28)
+      }
+      window.addEventListener('scroll', headerScrollHandler, { passive: true })
+      headerScrollHandler()
+    }
+  }
+
+  document.addEventListener('astro:page-load', initHeader)
 </script>

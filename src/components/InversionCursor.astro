@@ -1,7 +1,7 @@
 ---
 ---
 
-<div id='inversion-cursor' class='inversion-cursor' aria-hidden='true'></div>
+<div id='inversion-cursor' transition:persist='inversion-cursor' class='inversion-cursor' aria-hidden='true'></div>
 
 <style is:global>
   @media (hover: hover) and (pointer: fine) {
@@ -29,12 +29,16 @@
     transition:
       width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
       height 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 0.25s ease;
+      opacity 0.22s ease;
     will-change: transform, width, height;
   }
 
   .inversion-cursor.is-visible {
     opacity: 1;
+  }
+
+  .inversion-cursor.is-disabled {
+    opacity: 0 !important;
   }
 
   .inversion-cursor.is-hovering {
@@ -45,6 +49,17 @@
   .inversion-cursor.is-pressed {
     width: 13px;
     height: 13px;
+  }
+
+  .inversion-cursor.is-theme-hidden {
+    opacity: 0 !important;
+    transition: none !important;
+  }
+
+  .inversion-cursor.is-theme-reemerging {
+    width: 0px !important;
+    height: 0px !important;
+    transition: none !important;
   }
 
   @media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
@@ -60,30 +75,150 @@
 </style>
 
 <script>
+  export interface NorbCursorAPI {
+    getState: () => {
+      x: number
+      y: number
+      visible: boolean
+      enabled: boolean
+      radius: number
+    }
+    hideForTransition: () => void
+    reemergeAfterTransition: () => void
+    runFallbackExpansion: (
+      cx: number,
+      cy: number,
+      onPeak: () => void,
+      onDone: () => void
+    ) => void
+  }
+
+  declare global {
+    interface Window {
+      __norbCursorInit?: boolean
+      __norbCursor?: NorbCursorAPI
+    }
+  }
+
   ;(function initInversionCursor() {
-    const cursor = document.getElementById('inversion-cursor')
-    if (!cursor) return
-    if (
+    if (window.__norbCursorInit) return
+    window.__norbCursorInit = true
+
+    const isDisabledEnv =
       window.matchMedia('(hover: none)').matches ||
       window.matchMedia('(pointer: coarse)').matches ||
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      return
-    }
 
     let targetX = -100
     let targetY = -100
     let currentX = -100
     let currentY = -100
     let visible = false
+    let enabled = false
+    let lockedForFallback = false
     let rafId = 0
 
     const interactiveSelector = 'a, button, [role="button"], [data-cursor="link"], input, summary'
+    const getCursor = () => document.getElementById('inversion-cursor')
+
+    window.__norbCursor = {
+      getState() {
+        const cursor = getCursor()
+        const rect = cursor ? cursor.getBoundingClientRect() : null
+        const radius =
+          rect && rect.width > 0 && visible && enabled ? rect.width * 0.5 : 0
+        return {
+          x: currentX,
+          y: currentY,
+          visible: visible && !isDisabledEnv,
+          enabled: enabled && !isDisabledEnv,
+          radius
+        }
+      },
+      hideForTransition() {
+        const cursor = getCursor()
+        if (!cursor) return
+        cursor.classList.add('is-theme-hidden')
+      },
+      reemergeAfterTransition() {
+        const cursor = getCursor()
+        if (!cursor) return
+        cursor.classList.add('is-theme-reemerging')
+        cursor.classList.remove('is-theme-hidden')
+        // Force style flush so the cursor smoothly grows back from 0 to its active size
+        void cursor.offsetWidth
+        requestAnimationFrame(() => {
+          cursor.classList.remove('is-theme-reemerging')
+        })
+      },
+      runFallbackExpansion(cx, cy, onPeak, onDone) {
+        const cursor = getCursor()
+        if (!cursor || isDisabledEnv) {
+          onPeak()
+          onDone()
+          return
+        }
+        lockedForFallback = true
+        const maxR = Math.hypot(
+          Math.max(cx, window.innerWidth - cx),
+          Math.max(cy, window.innerHeight - cy)
+        )
+        const targetDiameter = maxR * 2 + 48
+        const startWidth = cursor.getBoundingClientRect().width || 24
+
+        cursor.classList.remove('is-disabled', 'is-theme-hidden')
+        cursor.classList.add('is-visible')
+        cursor.style.transition = 'none'
+        cursor.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`
+        cursor.style.width = `${startWidth}px`
+        cursor.style.height = `${startWidth}px`
+        void cursor.offsetWidth
+
+        cursor.style.transition =
+          'width 0.56s cubic-bezier(0.22, 1, 0.36, 1), height 0.56s cubic-bezier(0.22, 1, 0.36, 1)'
+        cursor.style.width = `${targetDiameter}px`
+        cursor.style.height = `${targetDiameter}px`
+
+        window.setTimeout(() => {
+          onPeak()
+          cursor.style.transition = 'none'
+          cursor.style.width = ''
+          cursor.style.height = ''
+          cursor.classList.add('is-theme-reemerging')
+          if (!enabled) cursor.classList.add('is-disabled')
+          void cursor.offsetWidth
+          requestAnimationFrame(() => {
+            cursor.style.transition = ''
+            cursor.classList.remove('is-theme-reemerging')
+            lockedForFallback = false
+            onDone()
+          })
+        }, 560)
+      }
+    }
+
+    if (isDisabledEnv) return
+
+    const syncCursorEnabled = () => {
+      enabled = document.body.dataset.enableCursor === 'true'
+      document.body.classList.toggle('has-inversion-cursor', enabled)
+      const cursor = getCursor()
+      if (!cursor) return
+      cursor.classList.toggle('is-disabled', !enabled)
+      if (!enabled) {
+        cursor.classList.remove('is-hovering', 'is-pressed')
+      } else if (visible) {
+        cursor.classList.add('is-visible')
+      }
+    }
 
     const tick = () => {
-      currentX += (targetX - currentX) * 0.22
-      currentY += (targetY - currentY) * 0.22
-      cursor.style.transform = `translate3d(${currentX.toFixed(2)}px, ${currentY.toFixed(2)}px, 0) translate(-50%, -50%)`
+      const cursor = getCursor()
+      if (cursor && enabled && !lockedForFallback) {
+        currentX += (targetX - currentX) * 0.22
+        currentY += (targetY - currentY) * 0.22
+        cursor.style.transform = `translate3d(${currentX.toFixed(2)}px, ${currentY.toFixed(2)}px, 0) translate(-50%, -50%)`
+      }
       rafId = requestAnimationFrame(tick)
     }
 
@@ -92,13 +227,15 @@
       (e) => {
         targetX = e.clientX
         targetY = e.clientY
+        const cursor = getCursor()
         if (!visible) {
           currentX = targetX
           currentY = targetY
           visible = true
-          cursor.classList.add('is-visible')
           if (!rafId) rafId = requestAnimationFrame(tick)
         }
+        if (!cursor || !enabled || lockedForFallback) return
+        cursor.classList.add('is-visible')
         const el = document.elementFromPoint(e.clientX, e.clientY)
         const isInteractive = !!el?.closest(interactiveSelector)
         cursor.classList.toggle('is-hovering', isInteractive)
@@ -106,11 +243,26 @@
       { passive: true }
     )
 
-    window.addEventListener('pointerdown', () => cursor.classList.add('is-pressed'), { passive: true })
-    window.addEventListener('pointerup', () => cursor.classList.remove('is-pressed'), { passive: true })
+    window.addEventListener(
+      'pointerdown',
+      () => {
+        if (enabled && !lockedForFallback) getCursor()?.classList.add('is-pressed')
+      },
+      { passive: true }
+    )
+    window.addEventListener(
+      'pointerup',
+      () => {
+        getCursor()?.classList.remove('is-pressed')
+      },
+      { passive: true }
+    )
     document.addEventListener('pointerleave', () => {
       visible = false
-      cursor.classList.remove('is-visible')
+      getCursor()?.classList.remove('is-visible')
     })
+
+    document.addEventListener('astro:page-load', syncCursorEnabled)
+    syncCursorEnabled()
   })()
 </script>

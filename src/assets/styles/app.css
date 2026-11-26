@@ -75,6 +75,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  scrollbar-gutter: stable;
 }
 
 /* Theme-aware markdown images */
@@ -95,5 +96,73 @@ a {
   transition: color 0.2s ease;
   &:hover {
     color: hsl(var(--primary) / var(--un-text-opacity, 1));
+  }
+}
+
+/* View Transitions — Silky Minimalist Glide & Cross-Fade */
+@keyframes norbViewOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.992);
+    filter: blur(3px);
+  }
+}
+
+@keyframes norbViewIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.994);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+::view-transition-old(root) {
+  animation: 0.36s cubic-bezier(0.22, 1, 0.36, 1) both norbViewOut;
+}
+
+::view-transition-new(root) {
+  animation: 0.48s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both norbViewIn;
+}
+
+::view-transition-group(site-header) {
+  animation-duration: 0.36s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 50;
+}
+
+/* Circular Cursor-Expansion Theme Reveal (True Theme Swap, Not Invert Filter) */
+html.theme-transitioning::view-transition-old(root),
+html.theme-transitioning::view-transition-new(root) {
+  animation: none !important;
+  mix-blend-mode: normal;
+}
+
+html.theme-transitioning::view-transition-old(root) {
+  z-index: 1;
+}
+
+html.theme-transitioning::view-transition-new(root) {
+  z-index: 9999;
+}
+
+html.theme-transitioning #site-header {
+  view-transition-name: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.12s !important;
+    animation-delay: 0s !important;
   }
 }

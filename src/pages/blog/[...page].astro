@@ -6,7 +6,7 @@ import { render, type CollectionEntry } from 'astro:content'
 import { Paginator } from 'astro-pure/components/pages'
 import { getBlogCollection, getUniqueTags, sortMDByDate } from 'astro-pure/server'
 import PageLayout from '@/layouts/BaseLayout.astro'
-import { getHostProjectForPost, getProjectMap, normalizeProjectSlug } from '@/lib/content-links'
+import { getHostProjectForPost, getProjectMap, getProjectUrl, normalizeProjectSlug } from '@/lib/content-links'
 import config from '@/site-config'
 
 export const prerender = true
@@ -27,12 +27,12 @@ interface Props {
   collectionsCount: number
 }
 
-const { page, uniqueTags, collectionsCount } = Astro.props
+const { page, uniqueTags } = Astro.props
 
 const projectMap = await getProjectMap()
 
 const enrichedPosts = await Promise.all(
-  page.data.map(async (post, idx) => {
+  page.data.map(async (post) => {
     const { remarkPluginFrontmatter } = await render(post)
     const hostProject = getHostProjectForPost(post, projectMap)
     const hostSlug = hostProject ? normalizeProjectSlug(hostProject) : null
@@ -41,7 +41,7 @@ const enrichedPosts = await Promise.all(
           src: post.data.heroImage.src,
           width: 960,
           format: 'webp',
-          quality: 82
+          quality: 84
         })
       : null
 
@@ -53,14 +53,11 @@ const enrichedPosts = await Promise.all(
     })
 
     return {
-      index: String((page.currentPage - 1) * (config.content.blogPageSize ?? 8) + idx + 1).padStart(2, '0'),
       id: post.id,
       title: post.data.title,
       description: post.data.description,
       date: formattedDate,
-      year: String(d.getFullYear()),
       tags: post.data.tags ?? [],
-      language: post.data.language ?? 'English',
       minutesRead: String(remarkPluginFrontmatter.minutesRead ?? '5 min read'),
       accent: post.data.heroImage?.color ?? '#5e81ac',
       heroSrc: optimizedHero?.src ?? '',
@@ -68,7 +65,7 @@ const enrichedPosts = await Promise.all(
         ? {
             slug: hostSlug!,
             name: hostProject.data.projectName,
-            category: hostProject.data.category,
+            url: getProjectUrl(hostProject),
             accent: hostProject.data.gradient.from
           }
         : null
@@ -107,86 +104,81 @@ const paginationProps = {
 const initialPost = enrichedPosts[0] ?? null
 ---
 
-<PageLayout {meta} enableCursor={false}>
-  <main class='pb-12 pt-4'>
-    {/* Editorial Header */}
-    <header class='flex flex-col justify-between gap-6 border-b border-border/80 pb-8 md:flex-row md:items-end'>
+<PageLayout {meta} enableCursor={true}>
+  <main class='pb-16 pt-6'>
+    {/* Clean, Breathable Header */}
+    <header class='flex flex-col justify-between gap-6 border-b border-border/70 pb-9 md:flex-row md:items-end'>
       <div>
-        <p class='font-mono text-xs uppercase tracking-[0.24em] text-muted-foreground'>
-          Journal &amp; Technical Notes
-        </p>
-        <h1 class='mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl lg:text-6xl'>
+        <h1 class='text-4xl font-semibold tracking-[-0.04em] sm:text-5xl lg:text-6xl'>
           Blogs
         </h1>
-        <p class='mt-3 max-w-xl text-base leading-relaxed text-muted-foreground'>
-          Ideas across academic research, compilers, developer tools, and visual craft. Posts linked to a build can jump straight to their host project.
+        <p class='mt-4 max-w-xl text-base leading-relaxed text-muted-foreground'>
+          Writing across research, compilers, tools, and visual craft.
         </p>
       </div>
 
-      <div class='flex flex-wrap items-center gap-4 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground'>
-        <span>{collectionsCount} Entries</span>
-        <span class='opacity-30'>/</span>
-        <a href='/archives' class='transition-colors hover:text-foreground'>Archives</a>
-        <span class='opacity-30'>/</span>
-        <a href='/tags' class='transition-colors hover:text-foreground'>Tags</a>
-        <span class='opacity-30'>/</span>
-        <a href='/search' class='transition-colors hover:text-foreground'>Search</a>
+      <div class='flex flex-wrap items-center gap-5 text-sm text-muted-foreground'>
+        <a href='/archives' class='transition-colors hover:text-foreground' data-cursor='link'>Archives</a>
+        <a href='/tags' class='transition-colors hover:text-foreground' data-cursor='link'>Tags</a>
+        <a href='/search' class='transition-colors hover:text-foreground' data-cursor='link'>Search</a>
       </div>
     </header>
 
-    {/* Interactive Filter Ribbon (All / By Project / By Tag) */}
-    <div class='mt-6 flex flex-wrap items-center justify-between gap-4'>
-      <div class='flex flex-wrap items-center gap-2' id='blog-filter-bar' role='group' aria-label='Filter blog posts'>
-        <button type='button' class='filter-chip is-active' data-filter-type='all' data-filter-val='all'>
-          All ({enrichedPosts.length})
-        </button>
+    {/* Minimal Filter Ribbon */}
+    <div class='mt-8 flex flex-wrap items-center gap-2' id='blog-filter-bar' role='group' aria-label='Filter blog posts'>
+      <button
+        type='button'
+        class='filter-chip is-active'
+        data-filter-type='all'
+        data-filter-val='all'
+        data-cursor='link'
+      >
+        All
+      </button>
 
-        {
-          hostProjectsList.map((proj) => (
-            <button
-              type='button'
-              class='filter-chip'
-              data-filter-type='project'
-              data-filter-val={proj.slug}
-            >
-              <span
-                class='inline-block size-1.5 rounded-full'
-                style={`background-color: ${proj.accent};`}
-                aria-hidden='true'
-              />
-              <span>{proj.name}</span>
-            </button>
-          ))
-        }
+      {
+        hostProjectsList.map((proj) => (
+          <button
+            type='button'
+            class='filter-chip'
+            data-filter-type='project'
+            data-filter-val={proj.slug}
+            data-cursor='link'
+          >
+            <span
+              class='inline-block size-1.5 rounded-full'
+              style={`background-color: ${proj.accent};`}
+              aria-hidden='true'
+            />
+            <span>{proj.name}</span>
+          </button>
+        ))
+      }
 
-        {
-          uniqueTags.slice(0, 6).map((tag) => (
-            <button
-              type='button'
-              class='filter-chip filter-chip-subtle'
-              data-filter-type='tag'
-              data-filter-val={tag}
-            >
-              #{tag}
-            </button>
-          ))
-        }
-      </div>
-
-      <span id='blog-filter-status' class='font-mono text-xs text-muted-foreground'>
-        Showing {enrichedPosts.length} of {collectionsCount}
-      </span>
+      {
+        uniqueTags.slice(0, 6).map((tag) => (
+          <button
+            type='button'
+            class='filter-chip'
+            data-filter-type='tag'
+            data-filter-val={tag}
+            data-cursor='link'
+          >
+            #{tag}
+          </button>
+        ))
+      }
     </div>
 
-    {/* Editorial Split Stage: Numbered Archive Ledger + Sticky Visual Preview */}
+    {/* Editorial Split Stage: Clean Index + Sticky Visual Preview */}
     {
       enrichedPosts.length === 0 ? (
-        <p class='mt-12 text-muted-foreground'>No posts published yet.</p>
+        <p class='mt-14 text-muted-foreground'>No posts published yet.</p>
       ) : (
-        <div class='mt-10 grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-12'>
-          {/* Left: Numbered Interactive Index */}
+        <div class='mt-12 grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-14'>
+          {/* Left: Clean Interactive Index */}
           <section aria-label='Blog entries' class='lg:col-span-7'>
-            <ol id='blog-index-list' class='divide-y divide-border/75 border-y border-border/75'>
+            <ol id='blog-index-list' class='divide-y divide-border/70 border-y border-border/70'>
               {enrichedPosts.map((post, idx) => (
                 <li
                   class:list={['blog-ledger-row group relative', idx === 0 && 'is-highlighted']}
@@ -201,52 +193,47 @@ const initialPost = enrichedPosts[0] ?? null
                   data-post-tags={post.tags.join(',')}
                   data-post-project-slug={post.hostProject?.slug ?? ''}
                   data-post-project-name={post.hostProject?.name ?? ''}
+                  data-post-project-url={post.hostProject?.url ?? ''}
                 >
-                  <div class='py-6 transition-all duration-300 sm:py-7'>
-                    <div class='flex items-start gap-4 sm:gap-6'>
-                      {/* Editorial Numeral */}
-                      <span class='mt-1 font-mono text-xs tracking-[0.14em] text-muted-foreground transition-colors group-hover:text-foreground'>
-                        {post.index}
-                      </span>
+                  <div class='py-7 transition-all duration-300 sm:py-8'>
+                    <div class='flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground'>
+                      <span>{post.date}</span>
+                      <span class='opacity-35'>·</span>
+                      <span>{post.minutesRead}</span>
+                    </div>
 
-                      <div class='min-w-0 flex-1'>
-                        {/* Top metadata row */}
-                        <div class='flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground'>
-                          <span>{post.date}</span>
-                          <span class='opacity-35'>·</span>
-                          <span>{post.minutesRead}</span>
-                        </div>
+                    <a
+                      href={`/blog/${post.id}`}
+                      data-astro-prefetch
+                      data-cursor='link'
+                      class='mt-2.5 block no-underline'
+                    >
+                      <h2 class='flex items-baseline justify-between gap-4 text-xl font-semibold tracking-[-0.025em] text-foreground transition-transform duration-300 group-hover:translate-x-1 sm:text-2xl'>
+                        <span>{post.title}</span>
+                        <span class='shrink-0 text-base font-normal opacity-30 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100'>
+                          →
+                        </span>
+                      </h2>
+                      <p class='mt-2.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground'>
+                        {post.description}
+                      </p>
+                    </a>
 
-                        {/* Title + Read link */}
-                        <a
-                          href={`/blog/${post.id}`}
-                          data-astro-prefetch
-                          class='mt-2 block no-underline'
-                        >
-                          <h2 class='flex items-baseline justify-between gap-4 text-xl font-semibold tracking-[-0.025em] text-foreground transition-transform duration-300 group-hover:translate-x-1 sm:text-2xl'>
-                            <span>{post.title}</span>
-                            <span class='shrink-0 text-base font-normal opacity-30 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100'>
-                              →
-                            </span>
-                          </h2>
-                          <p class='mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground'>
-                            {post.description}
-                          </p>
-                        </a>
-
-                        {/* Bottom row: Host Project jump pill + tags */}
+                    {
+                      (post.hostProject || post.tags.length > 0) && (
                         <div class='mt-4 flex flex-wrap items-center gap-2'>
                           {post.hostProject && (
                             <a
-                              href={`/projects?project=${encodeURIComponent(post.hostProject.slug)}`}
-                              class='host-project-pill inline-flex items-center gap-1.5 rounded-full border border-foreground/25 bg-foreground/[0.04] px-3 py-1 text-[11px] font-medium text-foreground no-underline transition-all hover:border-foreground hover:bg-foreground hover:text-background'
+                              href={post.hostProject.url}
+                              data-cursor='link'
+                              class='inline-flex items-center gap-1.5 rounded-full border border-foreground/20 bg-foreground/[0.03] px-3 py-1 text-xs font-medium text-foreground no-underline transition-all hover:border-foreground hover:bg-foreground hover:text-background'
                             >
                               <span
                                 class='inline-block size-1.5 rounded-full'
                                 style={`background-color: ${post.hostProject.accent};`}
                                 aria-hidden='true'
                               />
-                              <span>Project · {post.hostProject.name}</span>
+                              <span>{post.hostProject.name}</span>
                               <span aria-hidden='true'>↗</span>
                             </a>
                           )}
@@ -254,35 +241,40 @@ const initialPost = enrichedPosts[0] ?? null
                           {post.tags.map((tag) => (
                             <a
                               href={`/tags/${tag}`}
-                              class='rounded-full border border-border/80 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground no-underline transition-colors hover:border-foreground/50 hover:text-foreground'
+                              data-cursor='link'
+                              class='rounded-full border border-border/75 px-2.5 py-0.5 text-xs text-muted-foreground no-underline transition-colors hover:border-foreground/50 hover:text-foreground'
                             >
                               #{tag}
                             </a>
                           ))}
                         </div>
-                      </div>
-                    </div>
+                      )
+                    }
                   </div>
                 </li>
               ))}
             </ol>
 
-            <p id='blog-empty-msg' class='hidden py-12 text-center text-sm text-muted-foreground'>
+            <p id='blog-empty-msg' class='hidden py-14 text-center text-sm text-muted-foreground'>
               No posts match this filter on this page.
             </p>
 
-            <div class='mt-8'>
+            <div class='mt-10'>
               <Paginator {...paginationProps} />
             </div>
           </section>
 
-          {/* Right: Sticky Editorial Preview Stage (Desktop) */}
+          {/* Right: Sticky Visual Preview Stage (Desktop) */}
           {initialPost && (
             <aside class='hidden lg:col-span-5 lg:block'>
-              <div class='sticky top-24'>
-                <div class='overflow-hidden rounded-2xl border border-border/80 bg-card/70 transition-colors'>
-                  {/* Visual Frame */}
-                  <div class='relative aspect-[16/10] w-full overflow-hidden bg-muted/50'>
+              <div class='sticky top-28'>
+                <div class='overflow-hidden rounded-2xl border border-border/70 bg-card/65 transition-colors'>
+                  <a
+                    id='preview-stage-img-link'
+                    href={`/blog/${initialPost.id}`}
+                    data-cursor='link'
+                    class='relative block aspect-[16/10] w-full overflow-hidden bg-muted/40'
+                  >
                     <img
                       id='preview-stage-img'
                       src={initialPost.heroSrc}
@@ -294,11 +286,10 @@ const initialPost = enrichedPosts[0] ?? null
                       class='pointer-events-none absolute inset-x-0 bottom-0 h-[2px]'
                       style={`background-color: ${initialPost.accent};`}
                     />
-                  </div>
+                  </a>
 
-                  {/* Inspector Details */}
                   <div class='p-6'>
-                    <div class='flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground'>
+                    <div class='flex items-center justify-between text-xs text-muted-foreground'>
                       <span id='preview-stage-date'>{initialPost.date}</span>
                       <span id='preview-stage-read'>{initialPost.minutesRead}</span>
                     </div>
@@ -312,15 +303,16 @@ const initialPost = enrichedPosts[0] ?? null
 
                     <p
                       id='preview-stage-desc'
-                      class='mt-2 text-sm leading-relaxed text-muted-foreground'
+                      class='mt-2.5 text-sm leading-relaxed text-muted-foreground'
                     >
                       {initialPost.description}
                     </p>
 
-                    <div class='mt-6 flex flex-wrap items-center gap-3 border-t border-border/70 pt-5'>
+                    <div class='mt-6 flex flex-wrap items-center gap-3 border-t border-border/60 pt-5'>
                       <a
                         id='preview-stage-read-link'
                         href={`/blog/${initialPost.id}`}
+                        data-cursor='link'
                         class='inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background no-underline transition-opacity hover:opacity-85'
                       >
                         <span>Read Post</span>
@@ -329,18 +321,15 @@ const initialPost = enrichedPosts[0] ?? null
 
                       <a
                         id='preview-stage-project-link'
-                        href={
-                          initialPost.hostProject
-                            ? `/projects?project=${encodeURIComponent(initialPost.hostProject.slug)}`
-                            : '/projects'
-                        }
+                        href={initialPost.hostProject ? initialPost.hostProject.url : '/projects'}
+                        data-cursor='link'
                         class:list={[
                           'inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium text-foreground no-underline transition-colors hover:border-foreground',
                           !initialPost.hostProject && 'hidden'
                         ]}
                       >
                         <span id='preview-stage-project-label'>
-                          {initialPost.hostProject ? `Host · ${initialPost.hostProject.name} ↗` : ''}
+                          {initialPost.hostProject ? `${initialPost.hostProject.name} ↗` : ''}
                         </span>
                       </a>
                     </div>
@@ -360,12 +349,12 @@ const initialPost = enrichedPosts[0] ?? null
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
-    padding: 0.4rem 0.9rem;
+    padding: 0.42rem 0.95rem;
     border-radius: 9999px;
     border: 1px solid hsl(var(--border));
     background: transparent;
     color: hsl(var(--muted-foreground));
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.22s ease;
@@ -379,24 +368,18 @@ const initialPost = enrichedPosts[0] ?? null
     border-color: hsl(var(--foreground));
     color: hsl(var(--background));
   }
-  .filter-chip-subtle {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
   .blog-ledger-row {
     transition: background-color 0.25s ease;
   }
   .blog-ledger-row.is-highlighted::before {
     content: '';
     position: absolute;
-    left: -1rem;
-    top: 1.75rem;
-    bottom: 1.75rem;
+    left: -1.15rem;
+    top: 2rem;
+    bottom: 2rem;
     width: 2px;
     background: hsl(var(--foreground));
-    opacity: 0.85;
+    opacity: 0.75;
   }
   @media (max-width: 1024px) {
     .blog-ledger-row.is-highlighted::before {
@@ -406,86 +389,95 @@ const initialPost = enrichedPosts[0] ?? null
 </style>
 
 <script>
-  const rows = Array.from(document.querySelectorAll<HTMLLIElement>('.blog-ledger-row'))
-  const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('#blog-filter-bar .filter-chip'))
-  const statusEl = document.getElementById('blog-filter-status')
-  const emptyEl = document.getElementById('blog-empty-msg')
+  function initBlogIndex() {
+    const listEl = document.getElementById('blog-index-list')
+    if (!listEl) return
 
-  const imgEl = document.getElementById('preview-stage-img') as HTMLImageElement | null
-  const accentEl = document.getElementById('preview-stage-accent')
-  const dateEl = document.getElementById('preview-stage-date')
-  const readEl = document.getElementById('preview-stage-read')
-  const titleEl = document.getElementById('preview-stage-title')
-  const descEl = document.getElementById('preview-stage-desc')
-  const readLinkEl = document.getElementById('preview-stage-read-link') as HTMLAnchorElement | null
-  const projLinkEl = document.getElementById('preview-stage-project-link') as HTMLAnchorElement | null
-  const projLabelEl = document.getElementById('preview-stage-project-label')
+    const rows = Array.from(document.querySelectorAll<HTMLLIElement>('.blog-ledger-row'))
+    const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('#blog-filter-bar .filter-chip'))
+    const emptyEl = document.getElementById('blog-empty-msg')
 
-  function activateRow(row: HTMLLIElement) {
-    rows.forEach((r) => r.classList.toggle('is-highlighted', r === row))
-    if (!titleEl) return
+    const imgLinkEl = document.getElementById('preview-stage-img-link') as HTMLAnchorElement | null
+    const imgEl = document.getElementById('preview-stage-img') as HTMLImageElement | null
+    const accentEl = document.getElementById('preview-stage-accent')
+    const dateEl = document.getElementById('preview-stage-date')
+    const readEl = document.getElementById('preview-stage-read')
+    const titleEl = document.getElementById('preview-stage-title')
+    const descEl = document.getElementById('preview-stage-desc')
+    const readLinkEl = document.getElementById('preview-stage-read-link') as HTMLAnchorElement | null
+    const projLinkEl = document.getElementById('preview-stage-project-link') as HTMLAnchorElement | null
+    const projLabelEl = document.getElementById('preview-stage-project-label')
 
-    const hero = row.dataset.postHero ?? ''
-    if (imgEl && hero) {
-      imgEl.style.opacity = '0.35'
-      requestAnimationFrame(() => {
-        imgEl.src = hero
-        imgEl.alt = row.dataset.postTitle ?? ''
-        imgEl.style.opacity = '1'
-      })
-    }
-    if (accentEl) accentEl.style.backgroundColor = row.dataset.postAccent ?? '#5e81ac'
-    if (dateEl) dateEl.textContent = row.dataset.postDate ?? ''
-    if (readEl) readEl.textContent = row.dataset.postRead ?? ''
-    titleEl.textContent = row.dataset.postTitle ?? ''
-    if (descEl) descEl.textContent = row.dataset.postDesc ?? ''
-    if (readLinkEl) readLinkEl.href = `/blog/${row.dataset.postId}`
+    function activateRow(row: HTMLLIElement) {
+      rows.forEach((r) => r.classList.toggle('is-highlighted', r === row))
+      if (!titleEl) return
 
-    const pSlug = row.dataset.postProjectSlug ?? ''
-    const pName = row.dataset.postProjectName ?? ''
-    if (projLinkEl && projLabelEl) {
-      if (pSlug && pName) {
-        projLinkEl.classList.remove('hidden')
-        projLinkEl.href = `/projects?project=${encodeURIComponent(pSlug)}`
-        projLabelEl.textContent = `Host · ${pName} ↗`
-      } else {
-        projLinkEl.classList.add('hidden')
+      const hero = row.dataset.postHero ?? ''
+      if (imgEl && hero) {
+        imgEl.style.opacity = '0.35'
+        requestAnimationFrame(() => {
+          imgEl.src = hero
+          imgEl.alt = row.dataset.postTitle ?? ''
+          imgEl.style.opacity = '1'
+        })
+      }
+      const postHref = `/blog/${row.dataset.postId}`
+      if (imgLinkEl) imgLinkEl.href = postHref
+      if (accentEl) accentEl.style.backgroundColor = row.dataset.postAccent ?? '#5e81ac'
+      if (dateEl) dateEl.textContent = row.dataset.postDate ?? ''
+      if (readEl) readEl.textContent = row.dataset.postRead ?? ''
+      titleEl.textContent = row.dataset.postTitle ?? ''
+      if (descEl) descEl.textContent = row.dataset.postDesc ?? ''
+      if (readLinkEl) readLinkEl.href = postHref
+
+      const pSlug = row.dataset.postProjectSlug ?? ''
+      const pName = row.dataset.postProjectName ?? ''
+      const pUrl = row.dataset.postProjectUrl ?? ''
+      if (projLinkEl && projLabelEl) {
+        if (pSlug && pName && pUrl) {
+          projLinkEl.classList.remove('hidden')
+          projLinkEl.href = pUrl
+          projLabelEl.textContent = `${pName} ↗`
+        } else {
+          projLinkEl.classList.add('hidden')
+        }
       }
     }
+
+    rows.forEach((row) => {
+      row.addEventListener('mouseenter', () => activateRow(row))
+      row.addEventListener('focusin', () => activateRow(row))
+    })
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const type = chip.dataset.filterType
+        const val = chip.dataset.filterVal ?? ''
+        chips.forEach((c) => c.classList.toggle('is-active', c === chip))
+
+        let visibleCount = 0
+        let firstVisible: HTMLLIElement | null = null
+
+        rows.forEach((row) => {
+          let match = true
+          if (type === 'project') {
+            match = row.dataset.postProjectSlug === val
+          } else if (type === 'tag') {
+            const tags = (row.dataset.postTags ?? '').split(',')
+            match = tags.includes(val)
+          }
+          row.classList.toggle('hidden', !match)
+          if (match) {
+            visibleCount++
+            if (!firstVisible) firstVisible = row
+          }
+        })
+
+        emptyEl?.classList.toggle('hidden', visibleCount > 0)
+        if (firstVisible) activateRow(firstVisible)
+      })
+    })
   }
 
-  rows.forEach((row) => {
-    row.addEventListener('mouseenter', () => activateRow(row))
-    row.addEventListener('focusin', () => activateRow(row))
-  })
-
-  chips.forEach((chip) => {
-    chip.addEventListener('click', () => {
-      const type = chip.dataset.filterType
-      const val = chip.dataset.filterVal ?? ''
-      chips.forEach((c) => c.classList.toggle('is-active', c === chip))
-
-      let visibleCount = 0
-      let firstVisible: HTMLLIElement | null = null
-
-      rows.forEach((row) => {
-        let match = true
-        if (type === 'project') {
-          match = row.dataset.postProjectSlug === val
-        } else if (type === 'tag') {
-          const tags = (row.dataset.postTags ?? '').split(',')
-          match = tags.includes(val)
-        }
-        row.classList.toggle('hidden', !match)
-        if (match) {
-          visibleCount++
-          if (!firstVisible) firstVisible = row
-        }
-      })
-
-      if (statusEl) statusEl.textContent = `Showing ${visibleCount} matching`
-      emptyEl?.classList.toggle('hidden', visibleCount > 0)
-      if (firstVisible) activateRow(firstVisible)
-    })
-  })
+  document.addEventListener('astro:page-load', initBlogIndex)
 </script>

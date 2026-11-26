@@ -4,6 +4,18 @@ export function normalizeProjectSlug(entry: CollectionEntry<'projects'>): string
   return entry.slug.replace(/\/index$/, '')
 }
 
+export function isCreativeProject(entry: CollectionEntry<'projects'>): boolean {
+  return entry.data.category === 'Creative'
+}
+
+export function getProjectUrl(entry: CollectionEntry<'projects'>): string {
+  const slug = normalizeProjectSlug(entry)
+  if (isCreativeProject(entry)) {
+    return slug === 'photography' ? '/creative#photography' : `/creative?project=${encodeURIComponent(slug)}`
+  }
+  return `/projects?project=${encodeURIComponent(slug)}`
+}
+
 export async function getProjectMap(): Promise<Map<string, CollectionEntry<'projects'>>> {
   const projects = await getCollection('projects')
   const map = new Map<string, CollectionEntry<'projects'>>()

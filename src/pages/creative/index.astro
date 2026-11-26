@@ -1,0 +1,871 @@
+---
+import { getImage } from 'astro:assets'
+import { getCollection, type CollectionEntry } from 'astro:content'
+import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
+import PageLayout from '@/layouts/BaseLayout.astro'
+import { getRelatedBlogsForProject, isCreativeProject, normalizeProjectSlug } from '@/lib/content-links'
+import { getGalleryItems } from '@/server/galleryService'
+
+const creativeRaw = (await getCollection('projects')).filter((entry) => isCreativeProject(entry))
+creativeRaw.sort((a, b) => {
+  const orderA = a.data.order ?? Infinity
+  const orderB = b.data.order ?? Infinity
+  if (orderA !== orderB) return orderA - orderB
+  return a.data.projectName.localeCompare(b.data.projectName)
+})
+
+const allBlogPosts = sortMDByDate(await getBlogCollection()) as CollectionEntry<'blog'>[]
+const galleryItems = await getGalleryItems()
+
+// Separate standalone creative design works from the photography archive intro
+const featuredCreativeRaw = creativeRaw.filter((entry) => normalizeProjectSlug(entry) !== 'photography')
+const photographyProject = creativeRaw.find((entry) => normalizeProjectSlug(entry) === 'photography')
+
+const featuredWorks = await Promise.all(
+  featuredCreativeRaw.map(async (entry) => {
+    const slug = normalizeProjectSlug(entry)
+    const relatedBlogs = getRelatedBlogsForProject(entry, allBlogPosts).map((p) => ({
+      id: p.id,
+      title: p.data.title,
+      date: p.data.publishDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short'
+      })
+    }))
+
+    const coverImg = entry.data.cover
+      ? await getImage({ src: entry.data.cover, width: 1400, format: 'webp', quality: 88 })
+      : null
+    const iconImg = entry.data.icon
+      ? await getImage({ src: entry.data.icon.src, width: 420, format: 'webp' })
+      : null
+    const rendered = await entry.render()
+
+    return {
+      slug,
+      name: entry.data.projectName,
+      description: entry.data.description,
+      year: entry.data.year ?? '',
+      tags: entry.data.tags ?? [],
+      gradientFrom: entry.data.gradient.from,
+      gradientTo: entry.data.gradient.to,
+      coverSrc: coverImg?.src ?? '',
+      iconSrc: iconImg?.src ?? '',
+      homepage: entry.data.homepage ?? '',
+      demopage: entry.data.demopage ?? '',
+      blogpage: entry.data.blogpage ?? '',
+      relatedBlogs,
+      Content: rendered.Content
+    }
+  })
+)
+
+// Build clean tag filters for Photography Archive (excluding generic "photography" tag)
+const photoTagSet = new Set<string>()
+for (const item of galleryItems) {
+  for (const tag of item.tags) {
+    const normalized = tag.trim().toLowerCase()
+    if (normalized && normalized !== 'photography') {
+      photoTagSet.add(normalized)
+    }
+  }
+}
+const photoTags = Array.from(photoTagSet).slice(0, 6)
+
+const clientGallery = galleryItems.map((item) => ({
+  slug: item.slug,
+  title: item.title,
+  description: item.description,
+  location: item.location ?? '',
+  camera: item.camera ?? '',
+  shootDate: item.shootDate
+    ? new Date(item.shootDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short'
+      })
+    : '',
+  tags: item.tags,
+  externalLink: item.externalLink ?? '',
+  frames: item.frames.map((f) => ({
+    title: f.title,
+    description: f.description,
+    smallSrc: f.images.small.src,
+    rawSrc: f.images.raw.src
+  }))
+}))
+
+const meta = {
+  title: 'Creative',
+  description: 'Visual design, desktop themes, photography, and 3D studies by Norb.'
+}
+---
+
+<PageLayout {meta} enableCursor={true}>
+  <main class='pb-20 pt-6'>
+    {/* Clean, Spacious Header */}
+    <header class='flex flex-col justify-between gap-6 border-b border-border/70 pb-9 md:flex-row md:items-end'>
+      <div>
+        <h1 class='text-4xl font-semibold tracking-[-0.04em] sm:text-5xl lg:text-6xl'>
+          Creative
+        </h1>
+        <p class='mt-4 max-w-xl text-base leading-relaxed text-muted-foreground'>
+          Visual design, photography, and 3D studies shaped by light, calm geometry, and nature.
+        </p>
+      </div>
+
+      <div class='flex flex-wrap items-center gap-6 text-sm text-muted-foreground'>
+        <a
+          href='https://sketchfab.com/horizon_studios'
+          target='_blank'
+          rel='noopener noreferrer'
+          data-cursor='link'
+          class='transition-colors hover:text-foreground'
+        >
+          Sketchfab ↗
+        </a>
+        <a
+          href='https://www.pexels.com/@ray-zhang-2155334924/gallery/'
+          target='_blank'
+          rel='noopener noreferrer'
+          data-cursor='link'
+          class='transition-colors hover:text-foreground'
+        >
+          Pexels ↗
+        </a>
+      </div>
+    </header>
+
+    {/* Section 1: Featured Design & Visual Projects */}
+    {
+      featuredWorks.length > 0 && (
+        <section aria-label='Featured creative projects' class='mt-14 space-y-16'>
+          {featuredWorks.map((work) => (
+            <article
+              id={`project-${work.slug}`}
+              data-creative-slug={work.slug}
+              class='creative-feature-card grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-14'
+            >
+              <div class='lg:col-span-7'>
+                {work.coverSrc ? (
+                  <div class='group overflow-hidden rounded-2xl border border-border/70 bg-muted/35 shadow-sm'>
+                    <img
+                      src={work.coverSrc}
+                      alt={work.name}
+                      class='aspect-[16/10] w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]'
+                      loading='eager'
+                    />
+                  </div>
+                ) : (
+                  <div
+                    class='flex aspect-[16/10] items-center justify-center rounded-2xl border border-border/70 bg-card/60'
+                    style={`background: radial-gradient(circle at 50% 50%, ${work.gradientFrom}22, transparent 70%);`}
+                  >
+                    {work.iconSrc && (
+                      <img src={work.iconSrc} alt={work.name} class='max-h-28 max-w-28 object-contain' />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div class='lg:col-span-5'>
+                {work.year && (
+                  <div class='flex items-center gap-2 text-sm text-muted-foreground'>
+                    <span
+                      class='inline-block size-2 rounded-full'
+                      style={`background-color: ${work.gradientFrom};`}
+                      aria-hidden='true'
+                    />
+                    <span>{work.year}</span>
+                  </div>
+                )}
+
+                <h2 class='mt-3 text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl'>
+                  {work.name}
+                </h2>
+
+                <p class='mt-4 text-base leading-relaxed text-foreground/80'>
+                  {work.description}
+                </p>
+
+                <div class='creative-prose mt-4 text-sm leading-[1.8] text-muted-foreground'>
+                  <work.Content />
+                </div>
+
+                {work.tags.length > 0 && (
+                  <div class='mt-6 flex flex-wrap gap-2'>
+                    {work.tags.map((tag) => (
+                      <span class='rounded-full border border-border/80 px-3 py-1 text-xs text-muted-foreground'>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div class='mt-7 flex flex-wrap items-center gap-3'>
+                  {work.relatedBlogs.length > 0 ? (
+                    <a
+                      href={`/blog/${work.relatedBlogs[0].id}`}
+                      data-cursor='link'
+                      class='creative-btn-primary'
+                    >
+                      <span>Read Story</span>
+                      <span aria-hidden='true'>→</span>
+                    </a>
+                  ) : work.blogpage ? (
+                    <a href={work.blogpage} data-cursor='link' class='creative-btn-primary'>
+                      <span>Read Story</span>
+                      <span aria-hidden='true'>→</span>
+                    </a>
+                  ) : null}
+
+                  {work.demopage && (
+                    <a
+                      href={work.demopage}
+                      target={work.demopage.startsWith('/') ? undefined : '_blank'}
+                      rel={work.demopage.startsWith('/') ? undefined : 'noopener noreferrer'}
+                      data-cursor='link'
+                      class='creative-btn-secondary'
+                    >
+                      <span>Preview</span>
+                      <span aria-hidden='true'>↗</span>
+                    </a>
+                  )}
+
+                  {work.homepage && (
+                    <a
+                      href={work.homepage}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      data-cursor='link'
+                      class='creative-btn-secondary'
+                    >
+                      <span>Source</span>
+                      <span aria-hidden='true'>↗</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
+      )
+    }
+
+    {/* Section 2: Photography Archive */}
+    <section
+      id='photography'
+      aria-label='Photography archive'
+      class='mt-24 border-t border-border/70 pt-14'
+    >
+      <div class='flex flex-col justify-between gap-6 md:flex-row md:items-end'>
+        <div>
+          <h2 class='text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl'>
+            Photography
+          </h2>
+          <p class='mt-3 max-w-xl text-base leading-relaxed text-muted-foreground'>
+            {
+              photographyProject?.data.description ??
+                'Quiet frames of light, botanical studies, and fleeting stillness captured during travels.'
+            }
+          </p>
+        </div>
+
+        {/* Minimal Tag Filters */}
+        <div
+          id='photo-filter-bar'
+          class='flex flex-wrap items-center gap-2'
+          role='group'
+          aria-label='Filter photography'
+        >
+          <button
+            type='button'
+            class='photo-filter-chip is-active'
+            data-photo-tag='all'
+            data-cursor='link'
+          >
+            All
+          </button>
+          {
+            photoTags.map((tag) => (
+              <button
+                type='button'
+                class='photo-filter-chip capitalize'
+                data-photo-tag={tag}
+                data-cursor='link'
+              >
+                {tag}
+              </button>
+            ))
+          }
+        </div>
+      </div>
+
+      {/* Breathable Masonry Grid */}
+      <div id='creative-masonry' class='creative-masonry mt-12'>
+        {
+          galleryItems.map((item, idx) => (
+            <button
+              type='button'
+              class='photo-card group'
+              data-photo-idx={idx}
+              data-photo-tags={item.tags.join(',')}
+              data-cursor='link'
+              aria-label={`View ${item.title}`}
+            >
+              <div class='photo-card-media'>
+                <img
+                  src={item.cover.images.small.src}
+                  width={item.cover.images.small.width}
+                  height={item.cover.images.small.height}
+                  alt={item.title}
+                  loading='lazy'
+                  decoding='async'
+                  class='photo-card-img'
+                />
+                {item.frames.length > 1 && (
+                  <span class='photo-series-badge'>{item.frames.length} frames</span>
+                )}
+                <div class='photo-card-caption'>
+                  <div class='font-medium text-white'>{item.title}</div>
+                  {item.location && item.location !== 'Unidentified' && (
+                    <div class='mt-0.5 text-xs text-white/75'>{item.location}</div>
+                  )}
+                </div>
+              </div>
+            </button>
+          ))
+        }
+      </div>
+    </section>
+  </main>
+
+  {/* Minimalist Lightbox */}
+  <div
+    id='creative-lightbox'
+    class='creative-lightbox'
+    role='dialog'
+    aria-modal='true'
+    aria-hidden='true'
+  >
+    <div class='lightbox-backdrop' id='lightbox-backdrop'></div>
+
+    <div class='lightbox-shell'>
+      <button
+        id='lightbox-close'
+        type='button'
+        class='lightbox-close-btn'
+        aria-label='Close viewer'
+        data-cursor='link'
+      >
+        ✕
+      </button>
+
+      <div class='lightbox-stage'>
+        <button
+          id='lightbox-prev'
+          type='button'
+          class='lightbox-arrow lightbox-arrow-prev'
+          aria-label='Previous photo'
+          data-cursor='link'
+        >
+          ←
+        </button>
+
+        <div class='lightbox-img-wrap'>
+          <img id='lightbox-img' class='lightbox-img' alt='' />
+        </div>
+
+        <button
+          id='lightbox-next'
+          type='button'
+          class='lightbox-arrow lightbox-arrow-next'
+          aria-label='Next photo'
+          data-cursor='link'
+        >
+          →
+        </button>
+      </div>
+
+      <div class='lightbox-meta'>
+        <div class='flex flex-wrap items-baseline justify-between gap-4'>
+          <div>
+            <h3 id='lightbox-title' class='text-lg font-medium tracking-[-0.02em] text-foreground'></h3>
+            <p id='lightbox-desc' class='mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground'></p>
+          </div>
+          <div class='flex flex-wrap items-center gap-3 text-xs text-muted-foreground'>
+            <span id='lightbox-location'></span>
+            <span id='lightbox-date'></span>
+            <span id='lightbox-frame-indicator' class='hidden rounded-full border border-border px-2.5 py-0.5'></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script
+    is:inline
+    id='creative-gallery-data'
+    type='application/json'
+    set:html={JSON.stringify(clientGallery)}
+  />
+</PageLayout>
+
+<style is:global>
+  .creative-prose p {
+    margin-bottom: 0.8rem;
+  }
+  .creative-prose p:last-child {
+    margin-bottom: 0;
+  }
+
+  .creative-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.58rem 1.2rem;
+    border-radius: 9999px;
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+  }
+  .creative-btn-primary:hover {
+    opacity: 0.86;
+    transform: translateY(-1px);
+    color: hsl(var(--background));
+  }
+  .creative-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.58rem 1.15rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border));
+    background: transparent;
+    color: hsl(var(--foreground));
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: border-color 0.22s ease, transform 0.22s ease;
+  }
+  .creative-btn-secondary:hover {
+    border-color: hsl(var(--foreground));
+    transform: translateY(-1px);
+    color: hsl(var(--foreground));
+  }
+
+  .photo-filter-chip {
+    padding: 0.38rem 0.9rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border));
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.22s ease;
+  }
+  .photo-filter-chip:hover {
+    border-color: hsl(var(--foreground) / 0.5);
+    color: hsl(var(--foreground));
+  }
+  .photo-filter-chip.is-active {
+    background: hsl(var(--foreground));
+    border-color: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+
+  /* Breathable Masonry Grid */
+  .creative-masonry {
+    column-count: 1;
+    column-gap: 1.5rem;
+  }
+  @media (min-width: 640px) {
+    .creative-masonry {
+      column-count: 2;
+    }
+  }
+  @media (min-width: 1024px) {
+    .creative-masonry {
+      column-count: 3;
+    }
+  }
+
+  .photo-card {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin-bottom: 1.5rem;
+    border: none;
+    background: transparent;
+    text-align: left;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    cursor: pointer;
+  }
+  .photo-card.is-hidden {
+    display: none;
+  }
+  .photo-card-media {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.95rem;
+    background: hsl(var(--muted) / 0.45);
+  }
+  .photo-card-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .photo-card:hover .photo-card-img {
+    transform: scale(1.035);
+  }
+  .photo-series-badge {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 3;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    background: rgba(12, 12, 12, 0.58);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    font-size: 11px;
+  }
+  .photo-card-caption {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 2;
+    padding: 2.2rem 1rem 0.9rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0) 100%);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.32s ease, transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+  .photo-card:hover .photo-card-caption,
+  .photo-card:focus-visible .photo-card-caption {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Minimalist Lightbox */
+  .creative-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.32s ease;
+  }
+  .creative-lightbox.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+    background: hsl(var(--background) / 0.92);
+    backdrop-filter: blur(22px);
+  }
+  .lightbox-shell {
+    position: relative;
+    z-index: 2;
+    width: min(1160px, 94vw);
+    max-height: 92svh;
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+    transform: scale(0.97);
+    transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .creative-lightbox.is-open .lightbox-shell {
+    transform: scale(1);
+  }
+  .lightbox-close-btn {
+    position: absolute;
+    top: -0.5rem;
+    right: 0;
+    z-index: 5;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--background) / 0.85);
+    color: hsl(var(--foreground));
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  .lightbox-close-btn:hover {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+  .lightbox-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3.25rem;
+  }
+  .lightbox-img-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 74svh;
+  }
+  .lightbox-img {
+    max-width: 100%;
+    max-height: 74svh;
+    border-radius: 0.85rem;
+    object-fit: contain;
+    box-shadow: 0 28px 64px -24px rgba(0, 0, 0, 0.32);
+    transition: opacity 0.22s ease;
+  }
+  .lightbox-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--background) / 0.78);
+    backdrop-filter: blur(12px);
+    color: hsl(var(--foreground));
+    font-size: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  .lightbox-arrow:hover {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+  .lightbox-arrow-prev {
+    left: 0;
+  }
+  .lightbox-arrow-next {
+    right: 0;
+  }
+  .lightbox-meta {
+    padding: 0 3.25rem;
+  }
+
+  @media (max-width: 640px) {
+    .lightbox-stage {
+      padding: 0;
+    }
+    .lightbox-meta {
+      padding: 0;
+    }
+    .lightbox-arrow {
+      width: 2rem;
+      height: 2rem;
+      font-size: 0.8rem;
+    }
+  }
+</style>
+
+<script>
+  import { smoothScrollTo } from '@/lib/smooth-scroll'
+
+  interface ClientFrame {
+    title: string
+    description: string
+    smallSrc: string
+    rawSrc: string
+  }
+  interface ClientPhotoItem {
+    slug: string
+    title: string
+    description: string
+    location: string
+    camera: string
+    shootDate: string
+    tags: string[]
+    frames: ClientFrame[]
+  }
+
+  let cleanupCreative: (() => void) | null = null
+
+  function initCreativePage() {
+    if (cleanupCreative) {
+      cleanupCreative()
+      cleanupCreative = null
+    }
+
+    const dataEl = document.getElementById('creative-gallery-data')
+    if (!dataEl) return
+
+    const items: ClientPhotoItem[] = JSON.parse(dataEl.textContent || '[]')
+    const filterBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('#photo-filter-bar .photo-filter-chip'))
+    const photoCards = Array.from(document.querySelectorAll<HTMLButtonElement>('#creative-masonry .photo-card'))
+
+    const lightbox = document.getElementById('creative-lightbox')!
+    const backdrop = document.getElementById('lightbox-backdrop')!
+    const closeBtn = document.getElementById('lightbox-close')!
+    const prevBtn = document.getElementById('lightbox-prev')!
+    const nextBtn = document.getElementById('lightbox-next')!
+    const imgEl = document.getElementById('lightbox-img') as HTMLImageElement
+    const titleEl = document.getElementById('lightbox-title')!
+    const descEl = document.getElementById('lightbox-desc')!
+    const locEl = document.getElementById('lightbox-location')!
+    const dateEl = document.getElementById('lightbox-date')!
+    const frameIndEl = document.getElementById('lightbox-frame-indicator')!
+
+    let visibleIndices: number[] = items.map((_, i) => i)
+    let currentVisiblePos = 0
+    let currentFrameIdx = 0
+    let isOpen = false
+
+    function renderLightbox() {
+      const itemIdx = visibleIndices[currentVisiblePos]
+      const item = items[itemIdx]
+      if (!item) return
+      const frame = item.frames[currentFrameIdx] ?? item.frames[0]
+      if (!frame) return
+
+      imgEl.style.opacity = '0.45'
+      imgEl.src = frame.smallSrc
+      imgEl.alt = frame.title || item.title
+
+      const hiRes = new Image()
+      hiRes.onload = () => {
+        if (imgEl.src.endsWith(frame.smallSrc) || imgEl.alt === (frame.title || item.title)) {
+          imgEl.src = frame.rawSrc
+          imgEl.style.opacity = '1'
+        }
+      }
+      hiRes.src = frame.rawSrc
+      requestAnimationFrame(() => {
+        imgEl.style.opacity = '1'
+      })
+
+      titleEl.textContent = frame.title || item.title
+      descEl.textContent = frame.description || item.description
+      locEl.textContent = item.location && item.location !== 'Unidentified' ? item.location : ''
+      dateEl.textContent = item.shootDate
+      if (item.frames.length > 1) {
+        frameIndEl.classList.remove('hidden')
+        frameIndEl.textContent = `${currentFrameIdx + 1} / ${item.frames.length}`
+      } else {
+        frameIndEl.classList.add('hidden')
+      }
+    }
+
+    function openLightbox(itemIdx: number) {
+      const pos = visibleIndices.indexOf(itemIdx)
+      currentVisiblePos = pos >= 0 ? pos : 0
+      currentFrameIdx = 0
+      isOpen = true
+      renderLightbox()
+      lightbox.classList.add('is-open')
+      lightbox.setAttribute('aria-hidden', 'false')
+      document.body.style.overflow = 'hidden'
+    }
+
+    function closeLightbox() {
+      isOpen = false
+      lightbox.classList.remove('is-open')
+      lightbox.setAttribute('aria-hidden', 'true')
+      document.body.style.overflow = ''
+    }
+
+    function stepLightbox(dir: 1 | -1) {
+      if (!visibleIndices.length) return
+      const curItem = items[visibleIndices[currentVisiblePos]]
+      if (curItem && curItem.frames.length > 1) {
+        const nextFrame = currentFrameIdx + dir
+        if (nextFrame >= 0 && nextFrame < curItem.frames.length) {
+          currentFrameIdx = nextFrame
+          renderLightbox()
+          return
+        }
+      }
+      currentVisiblePos = (currentVisiblePos + dir + visibleIndices.length) % visibleIndices.length
+      const nextItem = items[visibleIndices[currentVisiblePos]]
+      currentFrameIdx = dir < 0 && nextItem ? nextItem.frames.length - 1 : 0
+      renderLightbox()
+    }
+
+    // Filter tags
+    filterBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tag = btn.dataset.photoTag ?? 'all'
+        filterBtns.forEach((b) => b.classList.toggle('is-active', b === btn))
+        visibleIndices = []
+        photoCards.forEach((card) => {
+          const idx = Number(card.dataset.photoIdx ?? '0')
+          const tags = (card.dataset.photoTags ?? '').split(',')
+          const match = tag === 'all' || tags.includes(tag)
+          card.classList.toggle('is-hidden', !match)
+          if (match) visibleIndices.push(idx)
+        })
+      })
+    })
+
+    photoCards.forEach((card) => {
+      card.addEventListener('click', () => {
+        openLightbox(Number(card.dataset.photoIdx ?? '0'))
+      })
+    })
+
+    closeBtn.addEventListener('click', closeLightbox)
+    backdrop.addEventListener('click', closeLightbox)
+    prevBtn.addEventListener('click', () => stepLightbox(-1))
+    nextBtn.addEventListener('click', () => stepLightbox(1))
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return
+      if (e.key === 'Escape') closeLightbox()
+      else if (e.key === 'ArrowRight') stepLightbox(1)
+      else if (e.key === 'ArrowLeft') stepLightbox(-1)
+    }
+    window.addEventListener('keydown', onKeyDown)
+
+    // Scroll smoothly to linked creative project (?project=<slug>) or #photography
+    const params = new URLSearchParams(window.location.search)
+    const targetSlug = params.get('project')
+    if (targetSlug) {
+      const targetEl =
+        targetSlug === 'photography'
+          ? document.getElementById('photography')
+          : document.getElementById(`project-${targetSlug}`)
+      if (targetEl) {
+        requestAnimationFrame(() => {
+          const top = targetEl.getBoundingClientRect().top + window.scrollY - 96
+          smoothScrollTo(top)
+        })
+      }
+    }
+
+    cleanupCreative = () => {
+      window.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = ''
+    }
+  }
+
+  document.addEventListener('astro:before-swap', () => {
+    if (cleanupCreative) {
+      cleanupCreative()
+      cleanupCreative = null
+    }
+  })
+
+  document.addEventListener('astro:page-load', initCreativePage)
+</script>

@@ -1,6 +1,7 @@
 ---
 import { BackToTop } from 'astro-pure/components/pages'
 import type { SiteMeta } from 'astro-pure/types'
+import { Button } from 'astro-pure/user'
 import { cn } from 'astro-pure/utils'
 import PageLayout from '@/layouts/BaseLayout.astro'
 import { integ } from '@/site-config'
@@ -9,7 +10,6 @@ interface Props {
   meta: SiteMeta
   highlightColor?: string
   back?: string
-  backLabel?: string
   useSidebar?: boolean
   showReadingProgress?: boolean
 }
@@ -18,14 +18,20 @@ const {
   meta,
   highlightColor,
   back = '/',
-  backLabel = 'Back',
   useSidebar = true,
   showReadingProgress = false,
   ...props
 } = Astro.props
 ---
 
-<PageLayout {meta} {highlightColor} enableCursor={false} {...props}>
+<PageLayout
+  {meta}
+  {highlightColor}
+  showHighlightGradient={true}
+  transparentHeader={true}
+  enableCursor={false}
+  {...props}
+>
   {
     showReadingProgress && (
       <div class='reading-progress-bar' aria-hidden='true'>
@@ -34,23 +40,15 @@ const {
     )
   }
 
-  <div class='mb-6'>
-    <a
-      href={back}
-      class='group inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground no-underline transition-colors hover:text-foreground'
-    >
-      <span class='transition-transform duration-200 group-hover:-translate-x-1'>←</span>
-      <span>{backLabel}</span>
-    </a>
-  </div>
+  <Button title='Back' href={back} style='back' />
 
-  <main class='items-start gap-x-12 md:flex'>
+  <main class='mt-6 items-start gap-x-10 md:flex'>
     {/* Sidebar */}
     {
       useSidebar && (
         <aside
-          class='animate top-24 min-w-52 basis-64 overflow-y-auto pr-3 max-md:hidden md:sticky md:order-1 lg:shrink-0'
-          style='max-height:calc(100vh - 8rem); scrollbar-width: thin;'
+          class='animate top-20 min-w-48 basis-60 overflow-y-auto max-md:hidden md:sticky md:order-1 lg:shrink-0'
+          style='max-height:calc(100vh - 7rem); scrollbar-width: thin;'
           id='sidebar'
         >
           <slot name='sidebar' />
@@ -58,7 +56,7 @@ const {
       )
     }
 
-    <article class='min-w-0 max-w-[68ch] grow'>
+    <article class='min-w-0 grow'>
       {/* Content header */}
       <div id='content-header' class='animate'>
         <slot name='header' />
@@ -67,24 +65,21 @@ const {
       {/* Content */}
       <div
         id='content'
-        class={cn(
-          'blog-prose max-w-none animate mt-10 md:min-w-[45ch]',
-          integ.typography.class
-        )}
+        class={cn('blog-prose max-w-none animate mt-8 md:min-w-[45ch]', integ.typography.class)}
       >
         <slot />
       </div>
     </article>
   </main>
 
-  <div class='bottom mt-12 items-start gap-x-12 md:flex'>
+  <div class='bottom mt-6 items-start gap-x-10 md:flex'>
     {/* Bottom */}
-    <div class='mt-6 max-w-[68ch] flex-1 text-muted-foreground md:min-w-[50ch]'>
+    <div class='mt-8 flex-1 text-muted-foreground md:min-w-[50ch]'>
       <slot name='bottom' />
     </div>
     {
       useSidebar && (
-        <div class='min-w-52 basis-60 max-md:hidden'>
+        <div class='min-w-48 basis-60 max-md:hidden'>
           <slot name='bottom-sidebar' />
         </div>
       )
@@ -108,48 +103,35 @@ const {
   .reading-progress-fill {
     width: 100%;
     height: 100%;
-    background: hsl(var(--foreground));
+    background: var(--highlightColor, hsl(var(--foreground)));
+    opacity: 0.72;
     transform-origin: left center;
     transform: scaleX(0);
     transition: transform 0.08s linear;
   }
-  .blog-prose {
-    font-size: 1.04rem;
-    line-height: 1.82;
-    color: hsl(var(--foreground) / 0.86);
-  }
-  .blog-prose h2 {
-    margin-top: 2.6em;
-    margin-bottom: 0.85em;
-    letter-spacing: -0.025em;
-    font-weight: 600;
-  }
+  .blog-prose h2,
   .blog-prose h3 {
-    margin-top: 2em;
-    margin-bottom: 0.65em;
-    letter-spacing: -0.015em;
-    font-weight: 600;
-  }
-  .blog-prose p {
-    margin-block: 1.25em;
+    letter-spacing: -0.02em;
   }
   .blog-prose a {
-    text-decoration: underline;
-    text-decoration-color: hsl(var(--foreground) / 0.28);
     text-underline-offset: 4px;
-    transition: text-decoration-color 0.2s ease, color 0.2s ease;
-  }
-  .blog-prose a:hover {
-    text-decoration-color: hsl(var(--foreground));
   }
 </style>
 
 {
   showReadingProgress && (
     <script>
-      const fill = document.getElementById('reading-progress-fill')
-      const content = document.getElementById('content')
-      if (fill && content) {
+      let progressCleanup: (() => void) | null = null
+
+      function initReadingProgress() {
+        if (progressCleanup) {
+          progressCleanup()
+          progressCleanup = null
+        }
+        const fill = document.getElementById('reading-progress-fill')
+        const content = document.getElementById('content')
+        if (!fill || !content) return
+
         const update = () => {
           const rect = content.getBoundingClientRect()
           const total = Math.max(1, content.offsetHeight - window.innerHeight * 0.65)
@@ -159,7 +141,20 @@ const {
         window.addEventListener('scroll', update, { passive: true })
         window.addEventListener('resize', update, { passive: true })
         update()
+
+        progressCleanup = () => {
+          window.removeEventListener('scroll', update)
+          window.removeEventListener('resize', update)
+        }
       }
+
+      document.addEventListener('astro:before-swap', () => {
+        if (progressCleanup) {
+          progressCleanup()
+          progressCleanup = null
+        }
+      })
+      document.addEventListener('astro:page-load', initReadingProgress)
     </script>
   )
 }
