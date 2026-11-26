@@ -93,34 +93,8 @@ const chapterNav = [
   hideFooter={true}
   enableCursor={true}
 >
-  {/* Minimalistic Circle Loading Overlay (draws from bottom -> becomes "o" in Norb) */}
-  <div id='norb-loader' class='norb-loader' aria-hidden='true'>
-    <div id='loader-circle-wrap' class='loader-circle-wrap'>
-      <svg id='loader-svg' viewBox='0 0 100 100' class='loader-svg'>
-        <circle
-          id='loader-track'
-          cx='50'
-          cy='50'
-          r='38'
-          fill='none'
-          stroke='currentColor'
-          stroke-width='2'
-          opacity='0.14'
-        ></circle>
-        <circle
-          id='loader-arc'
-          cx='50'
-          cy='50'
-          r='38'
-          fill='none'
-          stroke='currentColor'
-          stroke-width='3.2'
-          stroke-linecap='round'
-          transform='rotate(90 50 50)'
-        ></circle>
-      </svg>
-    </div>
-  </div>
+  {/* Minimalistic Loading Veil (the actual "o" in Norb acts as the loading indicator above it) */}
+  <div id='norb-loader' class='norb-loader' aria-hidden='true'></div>
 
   {/* Floating Scroll-Morph Layer: "Norb" shrinks smoothly from Hero into Header "Norb's Space" */}
   <div id='hero-norb-flight' class='hero-norb-flight' aria-hidden='true'>Norb</div>
@@ -168,7 +142,8 @@ const chapterNav = [
               <span class='norb-letter'>N</span><span
                 id='norb-o-slot'
                 class='norb-o-slot'
-                aria-label='o'>o</span
+                aria-label='o'
+              ><span id='norb-o-glyph' class='norb-o-glyph'>o</span></span
               ><span class='norb-letter'>rb</span>
             </span>
           </h1>
@@ -203,7 +178,7 @@ const chapterNav = [
     <section id='bio-track' class='bio-track' aria-label='Autobiography'>
       <div class='bio-sticky'>
         <div class='mx-auto flex h-full w-full max-w-[78rem] flex-col justify-center px-6 sm:px-10'>
-          <div class='bio-stage-content max-w-2xl'>
+          <div id='bio-stage-content' class='bio-stage-content max-w-2xl'>
             {/* Static "I am [a]" + Morphing Role Title */}
             <div class='bio-headline-wrap'>
               <div id='bio-prefix-wrap' class='bio-prefix-wrap'>
@@ -249,49 +224,22 @@ const chapterNav = [
       </div>
     </section>
 
-    {/* SECTION 7: FINALE ("I am Norb" + Contact + Portals) */}
+    {/* SECTION 7: FINALE ("I am Norb" + Contact) */}
     <section id='finale-section' class='finale-stage' data-scene='7'>
       <div class='mx-auto flex min-h-screen w-full max-w-[78rem] flex-col px-6 pb-8 pt-20 sm:px-10'>
         <div class='flex flex-1 flex-col justify-center py-8'>
-          <div class='finale-content max-w-[35rem]'>
-            <h2 class='finale-heading text-[clamp(3rem,7.2vw,5.75rem)] font-semibold leading-[1.0] tracking-[-0.048em]'>
+          <div class='finale-content max-w-[34rem]'>
+            <h2 class='finale-heading text-[clamp(3.1rem,7.4vw,6rem)] font-semibold leading-[1.0] tracking-[-0.048em]'>
               <span class='font-light opacity-60'>I am </span><span>Norb</span><span class='opacity-35'>.</span>
             </h2>
 
-            <p class='mt-5 max-w-md text-base leading-relaxed opacity-65 sm:text-[1.0625rem]'>
+            <p class='mt-6 max-w-md text-base leading-relaxed opacity-65 sm:text-[1.0625rem]'>
               Always open to conversations on LLM agents, computer vision, creative coding, or a quiet walk through a botanical garden.
             </p>
 
-            {/* Direct Portals to Core Sections */}
-            <div class='mt-10 grid grid-cols-1 gap-6 sm:grid-cols-3'>
-              <a href='/projects' class='finale-portal-item group' data-cursor='link'>
-                <div class='flex items-center justify-between'>
-                  <span class='text-[0.95rem] font-medium tracking-[-0.015em]'>Projects</span>
-                  <span class='text-xs opacity-45 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100'>↗</span>
-                </div>
-                <p class='mt-1.5 text-xs leading-relaxed opacity-55'>Compilers, AI systems &amp; dev tools.</p>
-              </a>
-
-              <a href='/creative' class='finale-portal-item group' data-cursor='link'>
-                <div class='flex items-center justify-between'>
-                  <span class='text-[0.95rem] font-medium tracking-[-0.015em]'>Creative</span>
-                  <span class='text-xs opacity-45 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100'>↗</span>
-                </div>
-                <p class='mt-1.5 text-xs leading-relaxed opacity-55'>Photography, visual design &amp; 3D studies.</p>
-              </a>
-
-              <a href='/blog' class='finale-portal-item group' data-cursor='link'>
-                <div class='flex items-center justify-between'>
-                  <span class='text-[0.95rem] font-medium tracking-[-0.015em]'>Blogs</span>
-                  <span class='text-xs opacity-45 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100'>↗</span>
-                </div>
-                <p class='mt-1.5 text-xs leading-relaxed opacity-55'>Notes on systems, research &amp; craft.</p>
-              </a>
-            </div>
-
             {/* Contact Information */}
-            <div class='mt-10 border-t border-current/12 pt-7'>
-              <div class='grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-3'>
+            <div class='mt-11 border-t border-current/12 pt-8'>
+              <div class='grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-3'>
                 {
                   extraLinks.map((item) => (
                     <a
@@ -374,11 +322,11 @@ const chapterNav = [
     pointer-events: none;
   }
 
-  /* Minimalistic Circle Loader (sits cleanly above floating header) */
+  /* Minimalistic Loading Veil (sits cleanly above floating header while hero "o" loads above it) */
   .norb-loader {
     position: fixed;
     inset: 0;
-    z-index: 120;
+    z-index: 110;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     transition: background-color 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease;
@@ -391,21 +339,6 @@ const chapterNav = [
     opacity: 0;
     pointer-events: none;
     visibility: hidden;
-  }
-  .loader-circle-wrap {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 112px;
-    height: 112px;
-    transform: translate(-50%, -50%);
-    will-change: transform, left, top, width, height, opacity;
-  }
-  .loader-svg {
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-    display: block;
   }
 
   /* Flying "Norb" scroll-morph clone (Hero -> Header "Norb's Space") */
@@ -430,6 +363,10 @@ const chapterNav = [
     position: relative;
     z-index: 2;
   }
+  .home-narrative.is-intro-stage {
+    z-index: 125;
+    pointer-events: none;
+  }
   .hero-stage {
     position: relative;
     min-height: 100svh;
@@ -438,6 +375,7 @@ const chapterNav = [
     flex-direction: column;
   }
   .hero-tilt-stage {
+    transform: perspective(1200px);
     transform-style: preserve-3d;
     will-change: transform;
   }
@@ -453,6 +391,23 @@ const chapterNav = [
   .norb-o-slot {
     display: inline-block;
     position: relative;
+    transform-origin: 54.9% 64.2%;
+    will-change: transform;
+  }
+  .norb-o-slot::before {
+    content: 'o';
+    position: absolute;
+    inset: 0;
+    opacity: var(--o-track-opacity, 0);
+    pointer-events: none;
+    user-select: none;
+  }
+  .norb-o-glyph {
+    display: block;
+    position: relative;
+    /* Expand mask-clip border-box beyond negative letter-spacing ink overhang without altering layout */
+    padding: 0.12em 0.14em;
+    margin: -0.12em -0.14em;
   }
   .hero-portal-link {
     display: inline-flex;
@@ -557,13 +512,13 @@ const chapterNav = [
     line-height: 1.06;
     letter-spacing: -0.04em;
     opacity: 0;
-    transform: translate3d(0, 32px, 0);
+    transform: translate3d(0, 52px, 0);
     filter: blur(6px);
     pointer-events: none;
     transition:
-      opacity 0.52s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.62s cubic-bezier(0.22, 1, 0.36, 1),
-      filter 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+      opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+      filter 0.65s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .bio-word-item.is-active {
     opacity: 1;
@@ -573,8 +528,12 @@ const chapterNav = [
   }
   .bio-word-item.is-past {
     opacity: 0;
-    transform: translate3d(0, -32px, 0);
+    transform: translate3d(0, -40px, 0);
     filter: blur(6px);
+    transition:
+      opacity 0.38s cubic-bezier(0.4, 0, 1, 1),
+      transform 0.45s cubic-bezier(0.4, 0, 1, 1),
+      filter 0.38s ease;
   }
 
   .bio-copy-viewport {
@@ -589,20 +548,25 @@ const chapterNav = [
     font-size: clamp(1.02rem, 1.32vw, 1.15rem);
     line-height: 1.8;
     opacity: 0;
-    transform: translate3d(0, 20px, 0);
+    transform: translate3d(0, 44px, 0);
     pointer-events: none;
     transition:
-      opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.58s cubic-bezier(0.22, 1, 0.36, 1);
+      opacity 0.68s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.98s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .bio-copy-item.is-active {
     opacity: 0.78;
     transform: translate3d(0, 0, 0);
     pointer-events: auto;
+    transition-delay: 0.09s;
   }
   .bio-copy-item.is-past {
     opacity: 0;
-    transform: translate3d(0, -18px, 0);
+    transform: translate3d(0, -28px, 0);
+    transition:
+      opacity 0.34s cubic-bezier(0.4, 0, 1, 1),
+      transform 0.42s cubic-bezier(0.4, 0, 1, 1);
+    transition-delay: 0s;
   }
 
   .bio-inline-link {
@@ -623,21 +587,6 @@ const chapterNav = [
   .finale-stage {
     position: relative;
     min-height: 100svh;
-  }
-  .finale-portal-item {
-    display: block;
-    padding-top: 0.9rem;
-    border-top: 1px solid hsl(var(--foreground) / 0.14);
-    color: inherit;
-    text-decoration: none;
-    transition:
-      transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-      border-color 0.25s ease;
-  }
-  .finale-portal-item:hover {
-    transform: translateY(-2px);
-    border-color: hsl(var(--foreground) / 0.52);
-    color: inherit;
   }
   .contact-link {
     color: inherit;
@@ -780,46 +729,97 @@ const chapterNav = [
 
     // Shared DOM refs
     const loader = document.getElementById('norb-loader')
-    const loaderWrap = document.getElementById('loader-circle-wrap')
-    const loaderArc = document.getElementById('loader-arc') as SVGCircleElement | null
-    const loaderTrack = document.getElementById('loader-track') as SVGCircleElement | null
+    const homeNarrative = document.getElementById('home-narrative')
     const heroTilt = document.getElementById('hero-tilt-stage')
     const heroNorbWord = document.getElementById('hero-norb-word')
     const oSlot = document.getElementById('norb-o-slot')
+    const oGlyph = document.getElementById('norb-o-glyph')
     const heroNorbFlight = document.getElementById('hero-norb-flight')
     const headerBrandLink = document.getElementById('header-brand-link')
     const headerBrandNorb = document.getElementById('header-brand-norb')
     const headerBrandSuffix = document.getElementById('header-brand-suffix')
 
-    const heroFadeTargets = document.querySelectorAll(
-      '.hero-line-1, .norb-letter, .hero-subtext, .hero-actions, .hero-scroll-cue, #site-header, #chapter-rail'
+    const heroFadeOnlyTargets = document.querySelectorAll(
+      '.norb-letter, #site-header, #chapter-rail'
     )
     const heroLine1 = document.querySelector<HTMLElement>('.hero-line-1')
     const heroSubtext = document.querySelector<HTMLElement>('.hero-subtext')
     const heroActions = document.querySelector<HTMLElement>('.hero-actions')
     const heroScrollCue = document.querySelector<HTMLElement>('.hero-scroll-cue')
+    const bioPrefixWrap = document.getElementById('bio-prefix-wrap')
+    const bioWordViewport = document.querySelector<HTMLElement>('.bio-word-viewport')
+    const bioCopyViewport = document.querySelector<HTMLElement>('.bio-copy-viewport')
 
     // =========================================================================
-    // 1. Minimalistic Circle Loading Animation -> becomes the "o" in Norb
+    // 1. Text "o" Loading Animation -> glides directly into its slot in "Norb"
     // =========================================================================
     let introFinished = false
+    let introDoneAt = 0
     let introTl: gsap.core.Timeline | null = null
-    let flightTweens: gsap.core.Tween[] = []
     let introAborted = false
     let removeSkipListeners: (() => void) | null = null
+
+    const setOProgress = (p: number) => {
+      if (!oGlyph) return
+      if (p <= 0.001) {
+        oGlyph.style.opacity = '0'
+        oGlyph.style.setProperty('-webkit-mask-image', 'none')
+        oGlyph.style.maskImage = 'none'
+      } else if (p >= 0.999) {
+        oGlyph.style.opacity = '1'
+        oGlyph.style.setProperty('-webkit-mask-image', 'none')
+        oGlyph.style.maskImage = 'none'
+      } else {
+        const deg = p * 360
+        const feather = Math.min(2.0, deg * 0.5, (360 - deg) * 0.5)
+        const mask = `conic-gradient(from 180deg at 53.3% 61.3%, #000 0deg, #000 ${deg.toFixed(2)}deg, transparent ${(deg + feather).toFixed(2)}deg)`
+        oGlyph.style.opacity = '1'
+        oGlyph.style.setProperty('-webkit-mask-image', mask)
+        oGlyph.style.maskImage = mask
+      }
+    }
+
+    const resetOLoaderState = () => {
+      if (oSlot) {
+        gsap.killTweensOf(oSlot)
+        gsap.set(oSlot, { clearProps: 'transform,opacity' })
+        oSlot.style.setProperty('--o-track-opacity', '0')
+      }
+      setOProgress(1)
+      homeNarrative?.classList.remove('is-intro-stage')
+    }
+
+    const setHeroRestingStyles = () => {
+      gsap.set(heroFadeOnlyTargets, { opacity: 1 })
+      if (heroLine1) {
+        heroLine1.style.opacity = '1'
+        heroLine1.style.translate = '0 0'
+      }
+      if (heroSubtext) {
+        heroSubtext.style.opacity = '0.7'
+        heroSubtext.style.translate = '0 0'
+      }
+      if (heroActions) {
+        heroActions.style.opacity = '1'
+        heroActions.style.translate = '0 0'
+      }
+      if (heroScrollCue) {
+        heroScrollCue.style.opacity = '0.35'
+        heroScrollCue.style.translate = '0 0'
+      }
+      resetOLoaderState()
+    }
 
     const finishIntroImmediately = () => {
       if (introFinished) return
       introFinished = true
+      introDoneAt = performance.now()
       hasPlayedIntroThisLoad = true
       removeSkipListeners?.()
       removeSkipListeners = null
       introTl?.kill()
-      flightTweens.forEach((tw) => tw.kill())
-      flightTweens = []
       loader?.classList.add('is-done')
-      gsap.set(heroFadeTargets, { opacity: 1, y: 0, clearProps: 'transform' })
-      if (oSlot) gsap.set(oSlot, { opacity: 1 })
+      setHeroRestingStyles()
       engine?.setOpacity(1)
       measureBrandMorph()
       updateScroll()
@@ -830,9 +830,9 @@ const chapterNav = [
         prefersReduced ||
         hasPlayedIntroThisLoad ||
         !loader ||
-        !loaderWrap ||
-        !loaderArc ||
+        !homeNarrative ||
         !oSlot ||
+        !oGlyph ||
         window.scrollY > 40
       ) {
         finishIntroImmediately()
@@ -840,147 +840,250 @@ const chapterNav = [
       }
 
       hasPlayedIntroThisLoad = true
-      const r = 38
-      const circumference = 2 * Math.PI * r
-      loaderArc.setAttribute('stroke-dasharray', `${circumference}`)
-      loaderArc.setAttribute('stroke-dashoffset', `${circumference}`)
 
-      // Reset tilt so oSlot measurement is exact
-      if (heroTilt) heroTilt.style.transform = ''
+      // Keep consistent perspective(1200px) so translateZ scale NEVER pops when tilt starts
+      if (heroTilt) heroTilt.style.transform = 'perspective(1200px)'
 
-      gsap.set(loaderWrap, {
-        left: window.innerWidth * 0.5,
-        top: window.innerHeight * 0.5,
-        xPercent: -50,
-        yPercent: -50,
-        x: 0,
-        y: 0,
-        width: 112,
-        height: 112,
-        opacity: 1
-      })
-      gsap.set(heroFadeTargets, { opacity: 0, y: 14 })
-      gsap.set(oSlot, { opacity: 0 })
+      gsap.set(heroFadeOnlyTargets, { opacity: 0 })
+      if (heroLine1) {
+        heroLine1.style.opacity = '0'
+        heroLine1.style.translate = '0 12px'
+      }
+      if (heroSubtext) {
+        heroSubtext.style.opacity = '0'
+        heroSubtext.style.translate = '0 12px'
+      }
+      if (heroActions) {
+        heroActions.style.opacity = '0'
+        heroActions.style.translate = '0 12px'
+      }
+      if (heroScrollCue) {
+        heroScrollCue.style.opacity = '0'
+        heroScrollCue.style.translate = '0 8px'
+      }
+      oSlot.style.setProperty('--o-track-opacity', '0')
+      setOProgress(0)
       engine?.setOpacity(0)
-
-      // Start drawing circle immediately; wait briefly for Satoshi font metrics before flying to "o"
-      const fontsReady = Promise.race([
-        document.fonts?.ready ?? Promise.resolve(),
-        new Promise<void>((resolve) => window.setTimeout(resolve, 350))
-      ])
-
-      introTl = gsap.timeline({
-        onComplete: () => {
-          if (introAborted) return
-          introFinished = true
-          removeSkipListeners?.()
-          removeSkipListeners = null
-          loader.classList.add('is-done')
-          measureBrandMorph()
-          updateScroll()
-        }
-      })
-
-      introTl
-        .to(loaderArc, {
-          attr: { 'stroke-dashoffset': 0 },
-          duration: 0.78,
-          ease: 'power2.inOut'
-        })
-        .to(loaderTrack, { opacity: 0, duration: 0.16 }, '-=0.16')
-        .add(() => {
-          if (introAborted || introFinished) return
-          introTl?.pause()
-
-          fontsReady.then(() => {
-            if (introAborted || introFinished) return
-            if (heroTilt) heroTilt.style.transform = ''
-            const rect = oSlot.getBoundingClientRect()
-            // Match the exact visual lowercase "o" glyph diameter & x-height center in Satoshi
-            const targetDiameter = rect.width * 1.19
-            const targetCenterX = rect.left + rect.width * 0.5
-            const targetCenterY = rect.top + rect.height * 0.585
-
-            loader.classList.add('is-revealing')
-
-            const t1 = gsap.to(loaderWrap, {
-              left: targetCenterX,
-              top: targetCenterY,
-              width: targetDiameter,
-              height: targetDiameter,
-              duration: 0.62,
-              ease: 'expo.inOut'
-            })
-            const t2 = gsap.to(loaderArc, {
-              attr: { 'stroke-width': 13.5 },
-              duration: 0.62,
-              ease: 'expo.inOut'
-            })
-            flightTweens.push(t1, t2)
-            introTl?.resume()
-          })
-        })
-        .to(
-          oSlot,
-          {
-            opacity: 1,
-            duration: 0.2,
-            ease: 'power1.out'
-          },
-          '+=0.48'
-        )
-        .to(
-          loaderWrap,
-          {
-            opacity: 0,
-            duration: 0.2,
-            ease: 'power1.out'
-          },
-          '<'
-        )
-        .to(
-          heroFadeTargets,
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.6,
-            stagger: 0.04,
-            ease: 'power3.out',
-            clearProps: 'transform'
-          },
-          '-=0.12'
-        )
-        .to(
-          { v: 0 },
-          {
-            v: 1,
-            duration: 0.8,
-            ease: 'power2.out',
-            onUpdate() {
-              engine?.setOpacity(this.targets()[0].v)
-            }
-          },
-          '-=0.52'
-        )
 
       const skip = () => {
         introAborted = true
         finishIntroImmediately()
       }
-      loader.addEventListener('click', skip, { once: true })
+      window.addEventListener('click', skip, { once: true })
       window.addEventListener('wheel', skip, { once: true, passive: true })
       removeSkipListeners = () => {
-        loader.removeEventListener('click', skip)
+        window.removeEventListener('click', skip)
         window.removeEventListener('wheel', skip)
       }
+
+      // Wait briefly for preloaded Satoshi font metrics so the "o" never flashes or reflows mid-intro
+      const fontsReady = Promise.race([
+        document.fonts?.ready ?? Promise.resolve(),
+        new Promise<void>((resolve) => window.setTimeout(resolve, 250))
+      ])
+
+      fontsReady.then(() => {
+        if (introAborted || introFinished) return
+        if (heroTilt) heroTilt.style.transform = 'perspective(1200px)'
+        gsap.set(oSlot, { clearProps: 'transform' })
+
+        // Measure the exact resting "o" glyph inside "Norb" and FLIP it to viewport center
+        const rect = oSlot.getBoundingClientRect()
+        const originX = rect.left + rect.width * 0.549
+        const originY = rect.top + rect.height * 0.642
+        const zFactor = 1200 / (1200 - 36) // .hero-line-2 translateZ(36px) inside perspective(1200px)
+        const dx = (window.innerWidth * 0.5 - originX) / zFactor
+        const dy = (window.innerHeight * 0.5 - originY) / zFactor
+        const startScale = Math.max(1.18, Math.min(1.8, 100 / Math.max(24, rect.width)))
+
+        gsap.set(oSlot, { x: dx, y: dy, scale: startScale })
+        homeNarrative.classList.add('is-intro-stage')
+
+        const trackState = { opacity: 0 }
+        const fillState = { p: 0 }
+        const revealState = { p: 0 }
+
+        introTl = gsap.timeline({
+          onComplete: () => {
+            if (introAborted) return
+            introFinished = true
+            introDoneAt = performance.now()
+            removeSkipListeners?.()
+            removeSkipListeners = null
+            resetOLoaderState()
+            loader.classList.add('is-done')
+            measureBrandMorph()
+            updateScroll()
+          }
+        })
+
+        introTl
+          .to(
+            trackState,
+            {
+              opacity: 0.16,
+              duration: 0.16,
+              ease: 'power2.out',
+              onUpdate() {
+                oSlot.style.setProperty('--o-track-opacity', trackState.opacity.toFixed(3))
+              }
+            },
+            0
+          )
+          .to(
+            fillState,
+            {
+              p: 1,
+              duration: 0.78,
+              ease: 'power2.inOut',
+              onUpdate() {
+                setOProgress(fillState.p)
+              }
+            },
+            0.04
+          )
+          .to(
+            trackState,
+            {
+              opacity: 0,
+              duration: 0.16,
+              ease: 'power1.out',
+              onUpdate() {
+                oSlot.style.setProperty('--o-track-opacity', trackState.opacity.toFixed(3))
+              }
+            },
+            '-=0.16'
+          )
+          .add(() => {
+            if (!introAborted && !introFinished) {
+              loader.classList.add('is-revealing')
+            }
+          })
+          .to(oSlot, {
+            x: 0,
+            y: 0,
+            scale: 1,
+            duration: 0.64,
+            ease: 'expo.inOut',
+            onComplete: () => {
+              if (introAborted) return
+              removeSkipListeners?.()
+              removeSkipListeners = null
+              resetOLoaderState()
+              loader.classList.add('is-done')
+            }
+          })
+          .to(
+            heroFadeOnlyTargets,
+            {
+              opacity: 1,
+              duration: 0.58,
+              stagger: 0.04,
+              ease: 'power3.out'
+            },
+            '-=0.16'
+          )
+          .to(
+            revealState,
+            {
+              p: 1,
+              duration: 0.66,
+              ease: 'power3.out',
+              onUpdate() {
+                const v = revealState.p
+                const dyPx = (1 - v) * 12
+                if (heroLine1) {
+                  heroLine1.style.opacity = v.toFixed(3)
+                  heroLine1.style.translate = `0 ${dyPx.toFixed(2)}px`
+                }
+                if (heroSubtext) {
+                  heroSubtext.style.opacity = (v * 0.7).toFixed(3)
+                  heroSubtext.style.translate = `0 ${(dyPx * 1.15).toFixed(2)}px`
+                }
+                if (heroActions) {
+                  heroActions.style.opacity = v.toFixed(3)
+                  heroActions.style.translate = `0 ${(dyPx * 1.3).toFixed(2)}px`
+                }
+                if (heroScrollCue) {
+                  heroScrollCue.style.opacity = (v * 0.35).toFixed(3)
+                  heroScrollCue.style.translate = `0 ${(dyPx * 0.7).toFixed(2)}px`
+                }
+              }
+            },
+            '<'
+          )
+          .to(
+            { v: 0 },
+            {
+              v: 1,
+              duration: 0.85,
+              ease: 'power2.out',
+              onUpdate() {
+                engine?.setOpacity(this.targets()[0].v)
+              }
+            },
+            '-=0.56'
+          )
+      })
     }
 
     // =========================================================================
-    // 2. Hero Subtle 3D Tilt on Mouse Motion (damps out cleanly while scrolling)
+    // 2. Hero Subtle 3D Tilt + Staggered Fast-Then-Gentle Bio Entrance
     // =========================================================================
     let tiltRafId = 0
     let onTiltMove: ((e: PointerEvent) => void) | null = null
     let heroScrollFraction = 0
+    let bioEntered = prefersReduced
+    let bioEnterTl: gsap.core.Timeline | null = null
+
+    if (!prefersReduced && bioPrefixWrap && bioWordViewport && bioCopyViewport) {
+      if (window.scrollY < bioTrack.offsetTop * 0.62) {
+        gsap.set(bioPrefixWrap, { opacity: 0, y: 88 })
+        gsap.set(bioWordViewport, { opacity: 0, y: 118 })
+        gsap.set(bioCopyViewport, { opacity: 0, y: 148 })
+        bioEntered = false
+      } else {
+        gsap.set([bioPrefixWrap, bioWordViewport, bioCopyViewport], { opacity: 1, y: 0 })
+        bioEntered = true
+      }
+    }
+
+    function updateBioEntrance(scrollY: number, bioTop: number) {
+      if (prefersReduced || !bioPrefixWrap || !bioWordViewport || !bioCopyViewport) return
+      const enterThreshold = bioTop * 0.62
+      const resetThreshold = bioTop * 0.34
+
+      if (!bioEntered && scrollY >= enterThreshold) {
+        bioEntered = true
+        bioEnterTl?.kill()
+        // Fake smooth-scroll staggered glide: rushes upward fast, then gently coasts to a soft stop
+        bioEnterTl = gsap.timeline()
+        bioEnterTl
+          .to(
+            bioPrefixWrap,
+            { opacity: 1, y: 0, duration: 0.95, ease: 'power4.out' },
+            0
+          )
+          .to(
+            bioWordViewport,
+            { opacity: 1, y: 0, duration: 1.15, ease: 'power4.out' },
+            0.09
+          )
+          .to(
+            bioCopyViewport,
+            { opacity: 1, y: 0, duration: 1.32, ease: 'power4.out' },
+            0.19
+          )
+      } else if (bioEntered && scrollY < resetThreshold) {
+        bioEntered = false
+        bioEnterTl?.kill()
+        bioEnterTl = gsap.timeline()
+        bioEnterTl
+          .to(bioPrefixWrap, { opacity: 0, y: 88, duration: 0.36, ease: 'power2.in' }, 0)
+          .to(bioWordViewport, { opacity: 0, y: 118, duration: 0.36, ease: 'power2.in' }, 0)
+          .to(bioCopyViewport, { opacity: 0, y: 148, duration: 0.36, ease: 'power2.in' }, 0)
+      }
+    }
 
     if (heroTilt && !prefersReduced) {
       let tx = 0
@@ -992,13 +1095,17 @@ const chapterNav = [
         ty = (e.clientY / window.innerHeight - 0.5) * 2
       }
       window.addEventListener('pointermove', onTiltMove, { passive: true })
-      const tiltTick = () => {
-        // Keep un-tilted during intro and fade tilt smoothly as user scrolls down
-        const damp = introFinished ? Math.max(0, 1 - heroScrollFraction * 4) : 0
+
+      const motionTick = () => {
+        // Gentle Hero 3D tilt (ramps in softly after intro finishes so there is zero snap)
+        const introRamp = introFinished
+          ? clamp01((performance.now() - introDoneAt) / 650)
+          : 0
+        const damp = introRamp * Math.max(0, 1 - heroScrollFraction * 4)
         cx += (tx * damp - cx) * 0.08
         cy += (ty * damp - cy) * 0.08
-        if (Math.abs(cx) < 0.001 && Math.abs(cy) < 0.001) {
-          heroTilt.style.transform = ''
+        if (Math.abs(cx) < 0.0005 && Math.abs(cy) < 0.0005) {
+          heroTilt.style.transform = 'perspective(1200px)'
         } else {
           const rotY = cx * 7.5
           const rotX = -cy * 5.5
@@ -1006,9 +1113,10 @@ const chapterNav = [
           const moveY = cy * 7
           heroTilt.style.transform = `perspective(1200px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg) translate3d(${moveX.toFixed(1)}px, ${moveY.toFixed(1)}px, 0)`
         }
-        tiltRafId = requestAnimationFrame(tiltTick)
+
+        tiltRafId = requestAnimationFrame(motionTick)
       }
-      tiltRafId = requestAnimationFrame(tiltTick)
+      tiltRafId = requestAnimationFrame(motionTick)
     }
 
     // =========================================================================
@@ -1024,8 +1132,8 @@ const chapterNav = [
     function measureBrandMorph() {
       if (!heroNorbWord || !heroNorbFlight || !headerBrandNorb) return
 
-      const prevTilt = heroTilt?.style.transform ?? ''
-      if (heroTilt) heroTilt.style.transform = ''
+      const prevTilt = heroTilt?.style.transform ?? 'perspective(1200px)'
+      if (heroTilt) heroTilt.style.transform = 'perspective(1200px)'
 
       const wordStyle = window.getComputedStyle(heroNorbWord)
       heroNorbFontSize = parseFloat(wordStyle.fontSize) || 120
@@ -1246,6 +1354,7 @@ const chapterNav = [
       const finaleTop = finaleSection!.offsetTop
 
       updateBrandMorph(scrollY, vh)
+      updateBioEntrance(scrollY, bioTop)
 
       let sceneProgress = 0
       let isInverted = false
@@ -1332,7 +1441,8 @@ const chapterNav = [
       removeSkipListeners = null
       clearSettleTimer()
       introTl?.kill()
-      flightTweens.forEach((tw) => tw.kill())
+      bioEnterTl?.kill()
+      resetOLoaderState()
       cancelAnimationFrame(tiltRafId)
       if (onTiltMove) window.removeEventListener('pointermove', onTiltMove)
       window.removeEventListener('scroll', onScroll)
@@ -1351,6 +1461,12 @@ const chapterNav = [
     if (cleanupHome) {
       cleanupHome()
       cleanupHome = null
+    }
+  })
+
+  document.addEventListener('astro:after-swap', () => {
+    if (hasPlayedIntroThisLoad) {
+      document.getElementById('norb-loader')?.classList.add('is-done')
     }
   })
 

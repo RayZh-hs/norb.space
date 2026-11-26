@@ -13,6 +13,8 @@
 }
 html {
   font-family: 'Satoshi', sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 @font-face {
@@ -99,43 +101,48 @@ a {
   }
 }
 
-/* View Transitions — Silky Minimalist Glide & Cross-Fade */
+/* View Transitions — Silky Minimalist Glide & Cross-Fade (dark/light backdrop matched, zero white flash) */
+::view-transition,
+::view-transition-group(root) {
+  background-color: hsl(var(--background));
+}
+
 @keyframes norbViewOut {
   from {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
     filter: blur(0px);
   }
   to {
     opacity: 0;
-    transform: translateY(-14px) scale(0.992);
-    filter: blur(3px);
+    transform: translateY(-10px);
+    filter: blur(2px);
   }
 }
 
 @keyframes norbViewIn {
   from {
     opacity: 0;
-    transform: translateY(18px) scale(0.994);
-    filter: blur(3px);
+    transform: translateY(12px);
+    filter: blur(2px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
     filter: blur(0px);
   }
 }
 
 ::view-transition-old(root) {
-  animation: 0.36s cubic-bezier(0.22, 1, 0.36, 1) both norbViewOut;
+  animation: 0.28s cubic-bezier(0.22, 1, 0.36, 1) both norbViewOut;
 }
 
 ::view-transition-new(root) {
-  animation: 0.48s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both norbViewIn;
+  animation: 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0s both norbViewIn;
 }
 
 ::view-transition-group(site-header) {
-  animation-duration: 0.36s;
+  animation-duration: 0.32s;
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 50;
 }

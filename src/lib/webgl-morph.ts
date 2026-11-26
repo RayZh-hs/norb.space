@@ -374,14 +374,14 @@ function evaluateScene(
   // SCENE 0: HERO — Infinite Spiral Galaxy occupying the entire RHS
   // =========================================================================
   if (sceneIdx === 0) {
-    // Galactic disc tilt (~50 deg around X, ~-18 deg around Z) for a sweeping cosmic plane
-    const cosTiltX = 0.6428
-    const sinTiltX = 0.7660
-    const cosTiltZ = 0.9511
-    const sinTiltZ = -0.3090
+    // Open, flattering galactic tilt (~36 deg around X, ~-16 deg around Z)
+    const cosTiltX = 0.8090
+    const sinTiltX = 0.5878
+    const cosTiltZ = 0.9613
+    const sinTiltZ = -0.2756
 
-    const coreCount = Math.floor(count * 0.12)
-    const armCount = Math.floor(count * 0.64)
+    const coreCount = Math.floor(count * 0.16)
+    const armCount = Math.floor(count * 0.72)
     const numArms = 4
 
     for (let i = 0; i < count; i++) {
@@ -391,36 +391,36 @@ function evaluateScene(
       let gz = 0
 
       if (i < coreCount) {
-        // Soft luminous galactic bulge with brisk inner rotation
-        const rad = Math.pow(r0[i], 0.72) * 0.56
-        const ang = r1[i] * TAU + t * (0.28 / (0.35 + rad))
-        const thick = (r2[i] + r3[i] - 1.0) * 0.20 * (1 - rad * 0.65)
+        // Radiant, concentrated galactic bulge with brisk inner rotation
+        const rad = Math.pow(r0[i], 0.76) * 0.62
+        const ang = r1[i] * TAU + t * (0.30 / (0.30 + rad))
+        const thick = (r2[i] + r3[i] - 1.0) * 0.18 * (1 - rad * 0.55)
         gx = Math.cos(ang) * rad
         gy = Math.sin(ang) * rad
         gz = thick
       } else if (i < armCount) {
-        // 4 sweeping logarithmic spiral arms extending past top, right, and bottom edges
+        // 4 crisp, high-density logarithmic spiral arms sweeping across the RHS
         const arm = i % numArms
-        const u = Math.pow(r0[i], 0.78)
-        const rad = 0.24 + u * 3.35
-        const omega = 0.20 / (0.48 + Math.pow(rad, 0.68))
-        const spiralAng = (arm / numArms) * TAU + Math.log(rad + 0.34) * 2.95 + t * omega
-        // Soft Gaussian-like scatter across arm spine & disc height
-        const scatterA = (r1[i] + r2[i] - 1.0) * (0.16 + u * 0.62)
-        const scatterR = (r3[i] - 0.5) * (0.10 + u * 0.45)
-        const rEff = Math.max(0.12, rad + scatterR)
+        const u = Math.pow(r0[i], 0.84)
+        const rad = 0.22 + u * 2.48
+        const omega = 0.22 / (0.44 + Math.pow(rad, 0.65))
+        const spiralAng = (arm / numArms) * TAU + Math.log(rad + 0.30) * 2.85 + t * omega
+        // Concentrated luminous arm spine with soft starry edge halo
+        const scatterA = (r1[i] + r2[i] - 1.0) * (0.10 + u * 0.38)
+        const scatterR = (r3[i] - 0.5) * (0.07 + u * 0.26)
+        const rEff = Math.max(0.14, rad + scatterR)
         const ang = spiralAng + scatterA
         gx = Math.cos(ang) * rEff
         gy = Math.sin(ang) * rEff
-        gz = (r1[i] - r2[i]) * (0.12 + 0.18 / (1 + rad * 0.75))
+        gz = (r1[i] - r2[i]) * (0.09 + 0.14 / (1 + rad * 0.8))
       } else {
-        // Infinite outer galactic halo & deep-space starfield filling the entire RHS
-        const u = Math.pow(r0[i], 0.62)
-        const rad = 0.60 + u * 4.45
-        const ang = r1[i] * TAU + t * (0.018 + (1 - u) * 0.045)
-        gx = Math.cos(ang) * rad + 0.38
-        gy = Math.sin(ang) * rad * 1.08
-        gz = (r2[i] - 0.5) * (0.55 + u * 1.15)
+        // Infinite outer galactic halo & starfield bleeding cleanly off top/right/bottom edges
+        const u = Math.pow(r0[i], 0.66)
+        const rad = 0.50 + u * 3.45
+        const ang = r1[i] * TAU + t * (0.020 + (1 - u) * 0.045)
+        gx = Math.cos(ang) * rad + 0.28
+        gy = Math.sin(ang) * rad * 1.06
+        gz = (r2[i] - 0.5) * (0.42 + u * 0.78)
       }
 
       // Tilt galaxy plane in 3D space
@@ -442,10 +442,10 @@ function evaluateScene(
       for (let s = 0; s < perArm && li < linePairs; s++, li++) {
         const u0 = s / perArm
         const u1 = (s + 1) / perArm
-        const rA = 0.28 + u0 * 2.4
-        const rB = 0.28 + u1 * 2.4
-        const a0 = (arm / numArms) * TAU + Math.log(rA + 0.34) * 2.95 + t * 0.06
-        const a1 = (arm / numArms) * TAU + Math.log(rB + 0.34) * 2.95 + t * 0.06
+        const rA = 0.24 + u0 * 2.15
+        const rB = 0.24 + u1 * 2.15
+        const a0 = (arm / numArms) * TAU + Math.log(rA + 0.30) * 2.85 + t * 0.06
+        const a1 = (arm / numArms) * TAU + Math.log(rB + 0.30) * 2.85 + t * 0.06
         const gx0 = Math.cos(a0) * rA, gy0 = Math.sin(a0) * rA
         const gx1 = Math.cos(a1) * rB, gy1 = Math.sin(a1) * rB
         const ty0 = gy0 * cosTiltX, tz0 = gy0 * sinTiltX
@@ -1231,6 +1231,7 @@ uniform vec2 uResolution;
 uniform float uOffsetX;
 uniform float uScale;
 uniform float uPixelRatio;
+uniform float uGalaxyFactor;
 
 out float vDepth;
 out float vSeed;
@@ -1278,7 +1279,9 @@ void main() {
   vNdcX = ndc.x;
 
   float depthScale = 0.68 + vDepth * 0.68;
-  gl_PointSize = clamp(aSize * depthScale * (persp * 1.12) * uPixelRatio, 1.7, 22.0);
+  float galaxyBoost = mix(1.0, 1.38, uGalaxyFactor);
+  float minPt = mix(1.7, 2.35, uGalaxyFactor) * uPixelRatio;
+  gl_PointSize = clamp(aSize * depthScale * galaxyBoost * (persp * 1.16) * uPixelRatio, minPt, 24.0);
 }
 `
 
@@ -1300,14 +1303,14 @@ void main() {
   vec2 c = gl_PointCoord - 0.5;
   float r = length(c);
   if (r > 0.5) discard;
-  float softEdge = mix(0.30, 0.12, uGalaxyFactor);
-  float disc = smoothstep(0.5, softEdge, r);
-  float depthAlpha = 0.44 + vDepth * 0.54;
+  float disc = smoothstep(0.5, mix(0.30, 0.22, uGalaxyFactor), r);
+  float depthAlpha = mix(0.44 + vDepth * 0.54, 0.72 + vDepth * 0.28, uGalaxyFactor);
   float tierBoost = mix(0.88, 1.0, vSizeNorm);
-  float twinkle = mix(1.0, 0.72 + 0.28 * sin(uTime * (1.2 + vSeed * 2.4) + vSeed * 52.0), uGalaxyFactor);
-  float leftMask = mix(1.0, smoothstep(-0.36, 0.08, vNdcX), uLeftFade);
-  float alpha = disc * depthAlpha * tierBoost * twinkle * leftMask * uOpacity;
-  vec3 col = mix(uColor, uAccent, step(0.92, vSeed) * 0.55);
+  float twinkle = mix(1.0, 0.84 + 0.16 * sin(uTime * (1.2 + vSeed * 2.2) + vSeed * 52.0), uGalaxyFactor);
+  float leftMask = mix(1.0, smoothstep(-0.46, -0.02, vNdcX), uLeftFade);
+  float alpha = min(1.0, disc * depthAlpha * tierBoost * twinkle * mix(1.0, 1.25, uGalaxyFactor)) * leftMask * uOpacity;
+  float accentMix = mix(step(0.92, vSeed) * 0.55, step(0.80, vSeed) * 0.52, uGalaxyFactor);
+  vec3 col = mix(uColor, uAccent, accentMix);
   fragColor = vec4(col, alpha);
 }
 `
@@ -1422,6 +1425,8 @@ export class MorphSceneEngine {
   private mouseVelX = 0
   private mouseVelY = 0
   private pointerActive = false
+  private pointerActivity = 0
+  private lastFrameTime = performance.now()
   private targetInvert = 0
   private currentInvert = 0
   private darkMode = false
@@ -1613,8 +1618,14 @@ export class MorphSceneEngine {
     const ny = (e.clientY / Math.max(1, window.innerHeight)) * 2 - 1
     const ndcY = -ny
     if (this.pointerActive) {
-      this.mouseVelX = Math.max(-0.35, Math.min(0.35, this.mouseVelX * 0.45 + (nx - this.mouseNdcX) * 0.85))
-      this.mouseVelY = Math.max(-0.35, Math.min(0.35, this.mouseVelY * 0.45 + (ndcY - this.mouseNdcY) * 0.85))
+      const dx = nx - this.mouseNdcX
+      const dy = ndcY - this.mouseNdcY
+      const moveDist = Math.hypot(dx, dy)
+      if (moveDist > 1e-4) {
+        this.mouseVelX = Math.max(-0.35, Math.min(0.35, this.mouseVelX * 0.45 + dx * 0.85))
+        this.mouseVelY = Math.max(-0.35, Math.min(0.35, this.mouseVelY * 0.45 + dy * 0.85))
+        this.pointerActivity = Math.min(1, this.pointerActivity + Math.min(0.55, moveDist * 16 + 0.08))
+      }
     }
     this.pointerActive = true
     this.mouseNdcX = nx
@@ -1677,7 +1688,8 @@ export class MorphSceneEngine {
     const vX = this.mouseVelX
     const vY = this.mouseVelY
     const speed = Math.hypot(vX, vY)
-    const active = this.pointerActive
+    const activity = this.pointerActivity
+    const applyForce = this.pointerActive && (activity > 0.002 || speed > 0.0005)
 
     const radius = 0.62
     const radiusSq = radius * radius
@@ -1690,7 +1702,7 @@ export class MorphSceneEngine {
       const by = pts[o + 1] + dispPos[o + 1]
       const bz = pts[o + 2] + dispPos[o + 2]
 
-      if (active) {
+      if (applyForce) {
         // Match exact vertex shader rotation & projection
         const x1 = bx * cy + bz * sy
         const z1 = -bx * sy + bz * cy
@@ -1714,14 +1726,14 @@ export class MorphSceneEngine {
           const f2 = falloff * falloff
           const nx = dx / dist
           const ny = dy / dist
-          // Tangential swirl + soft radial parting + directional fluid drag along mouse velocity
-          const radial = (0.011 + speed * 0.14) * f2
-          const swirl = (0.009 + speed * 0.12) * f2
+          // Motion-driven tangential swirl, radial parting & directional drag (fades out cleanly when mouse halts)
+          const radial = (0.011 * activity + speed * 0.14) * f2
+          const swirl = (0.009 * activity + speed * 0.12) * f2
           const wake = 0.085 * f2
 
           const impScreenX = (nx * radial - ny * swirl + vX * wake) * invScale
           const impScreenY = (ny * radial + nx * swirl + vY * wake) * invScale
-          const impScreenZ = (0.45 - dist / radius) * (0.010 + speed * 0.09) * f2 * invScale
+          const impScreenZ = (0.45 - dist / radius) * (0.010 * activity + speed * 0.09) * f2 * invScale
 
           // Inverse rotation (rotY(-ry) * rotX(-rx)) back into local galaxy space
           const iy1 = impScreenY * cx + impScreenZ * sx
@@ -1752,7 +1764,10 @@ export class MorphSceneEngine {
 
   private renderFrame() {
     if (this.destroyed) return
-    const t = (performance.now() - this.startTime) * 0.001
+    const now = performance.now()
+    const t = (now - this.startTime) * 0.001
+    const dt = Math.min(0.05, Math.max(0.001, (now - this.lastFrameTime) * 0.001))
+    this.lastFrameTime = now
 
     this.currentProgress += (this.targetProgress - this.currentProgress) * 0.13
     if (Math.abs(this.targetProgress - this.currentProgress) < 0.0008) {
@@ -1760,8 +1775,13 @@ export class MorphSceneEngine {
     }
     this.mouseX += (this.targetMouseX - this.mouseX) * 0.06
     this.mouseY += (this.targetMouseY - this.mouseY) * 0.06
-    this.mouseVelX *= 0.86
-    this.mouseVelY *= 0.86
+    const velDecay = Math.pow(0.86, dt * 60)
+    this.mouseVelX *= velDecay
+    this.mouseVelY *= velDecay
+    if (Math.abs(this.mouseVelX) < 1e-5) this.mouseVelX = 0
+    if (Math.abs(this.mouseVelY) < 1e-5) this.mouseVelY = 0
+    this.pointerActivity *= Math.exp(-dt * 4.5)
+    if (this.pointerActivity < 0.001) this.pointerActivity = 0
     this.currentInvert += (this.targetInvert - this.currentInvert) * 0.11
 
     const maxIdx = SCENE_COUNT - 1
@@ -1805,8 +1825,8 @@ export class MorphSceneEngine {
     let scale = isNarrow ? 0.78 : 0.94
     if (clamped < 1.0) {
       const k = 1 - clamped * clamped * (3 - 2 * clamped)
-      offsetX = isNarrow ? 0 : 1.06 + k * 0.24
-      scale = (isNarrow ? 0.78 : 0.94) + k * (isNarrow ? 0.08 : 0.12)
+      offsetX = isNarrow ? 0 : 1.06 + k * 0.14
+      scale = (isNarrow ? 0.78 : 0.94) + k * (isNarrow ? 0.08 : 0.08)
     } else if (clamped > 5.5 && clamped < 6.5) {
       const k = 1 - Math.abs(clamped - 6.0) * 2
       offsetX = isNarrow ? 0 : 1.06 * (1 - k * 0.28)
@@ -1974,13 +1994,13 @@ export class MorphSceneEngine {
         s > 0 ? pA[o + 2] + (pB[o + 2] - pA[o + 2]) * s : pA[o + 2]
       )
       const ndcX = (sx2 / Math.max(1, w)) * 2 - 1
-      const lf = clamp01((ndcX + 0.36) / 0.44)
+      const lf = clamp01((ndcX + 0.46) / 0.44)
       const leftMask = 1 - leftFade + leftFade * (lf * lf * (3 - 2 * lf))
       if (leftMask <= 0.01) continue
       const depth = Math.max(0, Math.min(1, (pz + 2.2) / 4.4))
-      const alpha = (0.40 + depth * 0.54) * leftMask * this.opacity
+      const alpha = Math.min(1, (0.58 + depth * 0.42)) * leftMask * this.opacity
       ctx.fillStyle = `rgba(${rgb},${rgb},${rgb},${alpha.toFixed(3)})`
-      const rad = Math.max(0.9, this.sizes[i] * (0.28 + depth * 0.34) * dpr)
+      const rad = Math.max(1.1, this.sizes[i] * (0.34 + depth * 0.36) * dpr)
       ctx.beginPath()
       ctx.arc(sx2, sy2, rad, 0, TAU)
       ctx.fill()
