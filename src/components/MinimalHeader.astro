@@ -177,9 +177,15 @@ function isActive(link: string) {
   function applyTheme(next: 'light' | 'dark') {
     localStorage.setItem('theme', next)
     const isDark = next === 'dark'
-    document.documentElement.classList.toggle('dark', isDark)
-    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
-    document.documentElement.style.backgroundColor = isDark ? '#0b0b0b' : '#fbfbfb'
+    const syncCanvas = (window as Window & { __norbSyncThemeCanvas?: (dark: boolean) => void })
+      .__norbSyncThemeCanvas
+    if (syncCanvas) {
+      syncCanvas(isDark)
+    } else {
+      document.documentElement.classList.toggle('dark', isDark)
+      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+      document.documentElement.style.backgroundColor = isDark ? '#0b0b0b' : '#fbfbfb'
+    }
     document
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute('content', isDark ? '#0b0b0b' : '#fbfbfb')

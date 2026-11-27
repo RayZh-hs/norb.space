@@ -106,30 +106,60 @@ const withCdn = (url: string) => (cdnOrigin && url.startsWith('/') ? `${cdnOrigi
 
 {/* View transitions */}
 <ClientRouter />
+<style is:inline id='norb-vt-theme' data-astro-transition-persist='norb-vt-theme'></style>
 <script is:inline>
-  // Paint the matching dark/light canvas immediately on initial load and preserve it across View Transition swaps
+  // Paint the matching dark/light canvas AND unqualified ::view-transition backdrop immediately on load
+  // and preserve them seamlessly across View Transition swaps & theme toggles (zero white blink).
   ;(function () {
+    function syncViewTransitionBackdrop(isDark) {
+      const bg = isDark ? '#0b0b0b' : '#fbfbfb'
+      let styleEl = document.getElementById('norb-vt-theme')
+      if (!styleEl) {
+        styleEl = document.createElement('style')
+        styleEl.id = 'norb-vt-theme'
+        styleEl.setAttribute('data-astro-transition-persist', 'norb-vt-theme')
+        document.head.appendChild(styleEl)
+      }
+      const nextRule = `::view-transition,::view-transition-group(root){background-color:${bg}!important;}`
+      if (styleEl.textContent !== nextRule) {
+        styleEl.textContent = nextRule
+      }
+    }
+
     function paintRootCanvas(root, isDark) {
       root.classList.toggle('dark', isDark)
       root.style.colorScheme = isDark ? 'dark' : 'light'
       root.style.backgroundColor = isDark ? '#0b0b0b' : '#fbfbfb'
+      syncViewTransitionBackdrop(isDark)
     }
 
-    let stored = null
-    try {
-      stored = localStorage.getItem('theme')
-    } catch {}
-    const initialDark =
-      !stored || stored === 'system'
+    window.__norbSyncThemeCanvas = function (isDark) {
+      paintRootCanvas(document.documentElement, !!isDark)
+    }
+
+    function resolveIsDark() {
+      let stored = null
+      try {
+        stored = localStorage.getItem('theme')
+      } catch {}
+      return !stored || stored === 'system'
         ? window.matchMedia('(prefers-color-scheme: dark)').matches
         : stored === 'dark'
-    paintRootCanvas(document.documentElement, initialDark)
+    }
+
+    paintRootCanvas(document.documentElement, resolveIsDark())
 
     if (!window.__norbSwapThemeBound) {
       window.__norbSwapThemeBound = true
       document.addEventListener('astro:before-swap', (event) => {
         const isDark = document.documentElement.classList.contains('dark')
         paintRootCanvas(event.newDocument.documentElement, isDark)
+      })
+      document.addEventListener('astro:after-swap', () => {
+        paintRootCanvas(document.documentElement, document.documentElement.classList.contains('dark'))
+      })
+      document.addEventListener('astro:page-load', () => {
+        paintRootCanvas(document.documentElement, resolveIsDark())
       })
     }
   })()

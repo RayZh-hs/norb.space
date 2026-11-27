@@ -103,16 +103,20 @@ a {
 }
 
 /* View Transitions — Silky Minimalist Glide & Cross-Fade (dark/light backdrop matched, zero white flash)
-   NOTE: ::view-transition does NOT inherit CSS custom properties from :root/.dark per spec,
-   so explicit literal colors are required on ::view-transition & ::view-transition-group(root). */
+   NOTE: In browsers, ::view-transition does not inherit custom properties from :root/.dark and
+   element-qualified selectors like html.dark::view-transition do not reliably match the top-layer
+   view-transition tree. The exact active theme background is therefore kept synced via the persisted
+   <style id="norb-vt-theme"> rule in BaseHead.astro, with prefers-color-scheme as pre-JS fallback. */
 ::view-transition,
 ::view-transition-group(root) {
   background-color: #fbfbfb;
 }
 
-html.dark::view-transition,
-html.dark::view-transition-group(root) {
-  background-color: #0b0b0b;
+@media (prefers-color-scheme: dark) {
+  ::view-transition,
+  ::view-transition-group(root) {
+    background-color: #0b0b0b;
+  }
 }
 
 @keyframes norbViewOut {
