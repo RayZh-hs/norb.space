@@ -23,6 +23,10 @@ export interface MorphEngineOptions {
 const TAU = Math.PI * 2
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
 const SCENE_COUNT = 8
+const MAX_USER_STARS = 256
+const GALAXY_TILT_X = 1.135 // ~65.0 deg
+const GALAXY_ROLL_Z = 0.12 // ~+6.9 deg subtle diagonal sweep
+const GALAXY_OMEGA = 0.064
 
 function mulberry32(seed: number) {
   let a = seed >>> 0
@@ -187,7 +191,7 @@ function buildSceneData(count: number): SceneData {
       galaxyData[g + 2] = baseAng
       galaxyData[g + 3] = gz
       galaxyData[g + 4] = galRand() * TAU
-      galaxyData[g + 5] = 0.064
+      galaxyData[g + 5] = GALAXY_OMEGA
     } else if (i < outerDustCount) {
       // Extended outer galactic dust halo orbiting broadly around the tilted plane
       const u = Math.pow(galRand(), 0.78)
@@ -475,8 +479,8 @@ function evaluateScene(
     // Disk tilted ~65 deg from face-on (steep panoramic depth with clear sweeping spiral arms)
     // with a subtle +7 deg diagonal roll so the galaxy sits balanced in the bottom-right
     // while foreground dust sweeps across the screen and far arms recede into depth.
-    const tiltX = 1.135 // ~65.0 deg
-    const rollZ = 0.12 // ~+6.9 deg subtle diagonal sweep
+    const tiltX = GALAXY_TILT_X
+    const rollZ = GALAXY_ROLL_Z
     const cosTiltX = Math.cos(tiltX)
     const sinTiltX = Math.sin(tiltX)
     const cosRollZ = Math.cos(rollZ)
@@ -1505,6 +1509,161 @@ void main() {
 }
 `
 
+const VERT_USER_STARS = `#version 300 es
+precision highp float;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in float aSeed;
+layout(location = 2) in float aSize;
+layout(location = 3) in float aBirth;
+
+uniform float uTime;
+uniform vec2 uMouse;
+uniform vec2 uMouseScale;
+uniform vec2 uRot;
+uniform vec2 uResolution;
+uniform float uOffsetX;
+uniform float uOffsetY;
+uniform float uScale;
+uniform float uPixelRatio;
+uniform float uGalaxyFactor;
+uniform float uMaxPointSize;
+
+out float vDepth;
+out float vSeed;
+out float vNdcX;
+out float vBlur;
+out float vNearFade;
+out float vAge;
+out float vCoreSize;
+out float vPointSize;
+
+mat3 rotY(float a) {
+  float c = cos(a), s = sin(a);
+  return mat3(c, 0.0, s, 0.0, 1.0, 0.0, -s, 0.0, c);
+}
+mat3 rotX(float a) {
+  float c = cos(a), s = sin(a);
+  return mat3(1.0, 0.0, 0.0, 0.0, c, -s, 0.0, s, c);
+}
+
+void main() {
+  float ry = uRot.x + uMouse.x * uMouseScale.x;
+  float rx = uRot.y + uMouse.y * uMouseScale.y;
+  vec3 pos = rotX(rx) * rotY(ry) * aPos;
+  pos *= uScale;
+  pos.x += uOffsetX;
+  pos.y += uOffsetY;
+
+  float zCam = mix(4.65, 4.25, uGalaxyFactor);
+  float focalLen = mix(2.48, 1.82, uGalaxyFactor);
+  float camDist = max(0.35, zCam - pos.z);
+  float persp = focalLen / camDist;
+  float aspect = uResolution.x / max(uResolution.y, 1.0);
+  vec2 ndc = vec2((pos.x * persp) / aspect, pos.y * persp);
+
+  gl_Position = vec4(ndc, clamp(-pos.z * 0.1, -0.95, 0.95), 1.0);
+  vDepth = clamp((pos.z + 3.0) / 6.0, 0.0, 1.0);
+  vSeed = aSeed;
+  vNdcX = ndc.x;
+
+  float dFocus = 4.05;
+  float cocNear = max(0.0, (dFocus - camDist) / camDist);
+  float cocFar = max(0.0, ((camDist - dFocus) / camDist) * 1.95);
+  float coc = max(0.0, max(cocNear, cocFar) - 0.14);
+  float blur = clamp(coc * 0.80, 0.0, 1.0) * uGalaxyFactor;
+  vBlur = blur;
+  vNearFade = mix(1.0, smoothstep(0.42, 1.10, camDist), uGalaxyFactor);
+
+  float age = max(0.0, uTime - aBirth);
+  vAge = age;
+
+  float sizeNorm = clamp((aSize - 1.5) / 8.5, 0.0, 1.0);
+  float nearBias = step(camDist, dFocus);
+  float bokehExpand = blur * mix(6.0 + sizeNorm * 4.5, 13.0 + sizeNorm * 14.0, nearBias);
+  float coreSize = clamp((aSize * (persp * 1.92) + bokehExpand) * uPixelRatio, 3.0 * uPixelRatio, uMaxPointSize * 0.65);
+  vCoreSize = coreSize;
+
+  // Allocate quad room for the 4-point diffraction glint + birth ripple without square clipping
+  float birthEnvelope = smoothstep(1.25, 0.0, age);
+  float idleQuad = coreSize * 2.5;
+  float birthQuad = max(idleQuad, 54.0 * uPixelRatio);
+  float ptSize = clamp(mix(idleQuad, birthQuad, birthEnvelope), 4.0 * uPixelRatio, uMaxPointSize);
+  vPointSize = ptSize;
+  gl_PointSize = ptSize;
+}
+`
+
+const FRAG_USER_STARS = `#version 300 es
+precision highp float;
+in float vDepth;
+in float vSeed;
+in float vNdcX;
+in float vBlur;
+in float vNearFade;
+in float vAge;
+in float vCoreSize;
+in float vPointSize;
+
+uniform float uTime;
+uniform float uPixelRatio;
+uniform float uGalaxyFactor;
+uniform float uLeftFade;
+uniform vec3 uColor;
+uniform vec3 uAccent;
+uniform float uOpacity;
+out vec4 fragColor;
+
+void main() {
+  vec2 p = (gl_PointCoord - 0.5) * vPointSize;
+  float dist = length(p);
+  if (dist > vPointSize * 0.5) discard;
+
+  // Snappy birth pop-in with a subtle luminous overshoot settling cleanly to core size
+  float popIn = smoothstep(0.0, 0.12, vAge);
+  float overshoot = 1.0 + 0.36 * exp(-vAge * 5.2) * smoothstep(0.0, 0.06, vAge);
+  float coreR = max(1.2 * uPixelRatio, vCoreSize * 0.5 * popIn * overshoot);
+  float rn = dist / coreR;
+
+  float sharpDisc = smoothstep(1.0, 0.34, rn);
+  float blurDisc = exp(-rn * rn * 2.8) * smoothstep(1.4, 0.18, rn);
+  float coreShape = mix(sharpDisc, blurDisc, vBlur);
+
+  // Delicate 4-point diffraction glint: brightens briefly on ignition, settles into subtle starlight
+  float birthGlint = exp(-vAge * 3.1) * smoothstep(0.0, 0.035, vAge);
+  float focusSharp = 1.0 - vBlur * 0.8;
+  float rayLen = coreR * (1.75 + birthGlint * 3.6) * focusSharp;
+  float rayThick = max(0.72 * uPixelRatio, coreR * 0.22);
+  float rayX = exp(-abs(p.y) / rayThick) * exp(-abs(p.x) / max(1.0, rayLen));
+  float rayY = exp(-abs(p.x) / rayThick) * exp(-abs(p.y) / max(1.0, rayLen));
+  float edgeMask = smoothstep(vPointSize * 0.5, vPointSize * 0.26, dist);
+  float sparkle = (rayX + rayY) * (0.24 * focusSharp + birthGlint * 0.85) * edgeMask;
+
+  // Whisper-subtle expanding birth ripple ring (0 -> 0.80s)
+  float rt = clamp(vAge / 0.80, 0.0, 1.0);
+  float ringEase = 1.0 - pow(1.0 - rt, 3.0);
+  float maxRingR = min(23.0 * uPixelRatio, vPointSize * 0.44);
+  float ringR = coreR * 0.75 + ringEase * max(0.0, maxRingR - coreR * 0.75);
+  float ringThick = 1.05 * uPixelRatio;
+  float ringWave = exp(-pow((dist - ringR) / ringThick, 2.0));
+  float ringFade = (1.0 - rt) * (1.0 - rt) * smoothstep(0.0, 0.05, rt);
+  float ring = ringWave * ringFade * 0.52 * step(vAge, 0.85);
+
+  float dofAlpha = mix(1.0, 0.44, pow(vBlur, 0.78));
+  float depthAlpha = 0.56 + vDepth * 0.44;
+  float twinkle = 0.84 + 0.16 * sin(uTime * (1.5 + vSeed * 2.4) + vSeed * 48.0);
+  float leftMask = mix(1.0, mix(0.84, 1.0, smoothstep(-0.78, 0.12, vNdcX)), uLeftFade);
+
+  float coreAlpha = coreShape * dofAlpha * depthAlpha * twinkle;
+  float totalShape = clamp(coreAlpha + sparkle * twinkle + ring, 0.0, 1.0);
+  float alpha = totalShape * vNearFade * leftMask * uOpacity * uGalaxyFactor;
+  if (alpha < 0.003) discard;
+
+  float accentMix = clamp(step(0.45, vSeed) * 0.45 + birthGlint * 0.55 + ring * 0.4, 0.0, 0.85);
+  vec3 col = mix(uColor, uAccent, accentMix);
+  fragColor = vec4(col, alpha);
+}
+`
+
 function compileShader(gl: WebGL2RenderingContext, type: number, src: string) {
   const s = gl.createShader(type)
   if (!s) return null
@@ -1550,6 +1709,36 @@ export class MorphSceneEngine {
   private dispPos: Float32Array
   private dispVel: Float32Array
 
+  // User-clicked stars in Scene 0 (ring buffer up to MAX_USER_STARS, zero per-frame allocations)
+  // Meta layout (stride 6):
+  //   Disk star (kind 0):    [0, gx0, gy0, gz0, bobPhase, omega]
+  //   Ambient star (kind 1): [1, bx, by, bz, driftPhase, driftRate]
+  // Drift layout (stride 4): [driftX, driftY, driftZ, driftDecay]
+  private userMeta = new Float32Array(MAX_USER_STARS * 6)
+  private userDrift = new Float32Array(MAX_USER_STARS * 4)
+  private userPos = new Float32Array(MAX_USER_STARS * 3)
+  private userSeed = new Float32Array(MAX_USER_STARS)
+  private userSize = new Float32Array(MAX_USER_STARS)
+  private userBirth = new Float32Array(MAX_USER_STARS)
+  private userDispPos = new Float32Array(MAX_USER_STARS * 3)
+  private userDispVel = new Float32Array(MAX_USER_STARS * 3)
+  private userStarCount = 0
+  private userStarCursor = 0
+  private userAttrsDirty = false
+  private clickRipples: { ndcX: number; ndcY: number }[] = []
+
+  // Latest view projection snapshot for exact screen-click -> 3D galaxy unprojection
+  private lastView = {
+    rotY: 0,
+    rotX: 0,
+    mouseScaleX: 0.14,
+    mouseScaleY: 0.1,
+    offsetX: 1.22,
+    offsetY: -0.24,
+    scale: 1.08,
+    galaxyFactor: 1
+  }
+
   private targetProgress = 0
   private currentProgress = 0
   private targetMouseX = 0
@@ -1562,6 +1751,8 @@ export class MorphSceneEngine {
   private mouseVelY = 0
   private pointerActive = false
   private pointerActivity = 0
+  private lastPointerMoveTime = 0
+  private suppressPointerImpulseUntil = 0
   private lastFrameTime = performance.now()
   private targetInvert = 0
   private currentInvert = 0
@@ -1580,16 +1771,23 @@ export class MorphSceneEngine {
   private maxPointSize = 64
   private pointProg: WebGLProgram | null = null
   private lineProg: WebGLProgram | null = null
+  private userProg: WebGLProgram | null = null
   private pointVao: WebGLVertexArrayObject | null = null
   private lineVao: WebGLVertexArrayObject | null = null
+  private userVao: WebGLVertexArrayObject | null = null
   private bufPtsA: WebGLBuffer | null = null
   private bufPtsB: WebGLBuffer | null = null
   private bufLinesA: WebGLBuffer | null = null
   private bufLinesB: WebGLBuffer | null = null
+  private bufUserPos: WebGLBuffer | null = null
+  private bufUserSeed: WebGLBuffer | null = null
+  private bufUserSize: WebGLBuffer | null = null
+  private bufUserBirth: WebGLBuffer | null = null
 
   // Cached uniform locations
   private uLine: Record<string, WebGLUniformLocation | null> = {}
   private uPoint: Record<string, WebGLUniformLocation | null> = {}
+  private uUser: Record<string, WebGLUniformLocation | null> = {}
 
   // Fallback 2D state
   private ctx2d: CanvasRenderingContext2D | null = null
@@ -1642,10 +1840,12 @@ export class MorphSceneEngine {
       if (gl) {
         const pointProg = linkProgram(gl, VERT_POINTS, FRAG_POINTS)
         const lineProg = linkProgram(gl, VERT_LINES, FRAG_LINES)
+        const userProg = linkProgram(gl, VERT_USER_STARS, FRAG_USER_STARS)
         if (pointProg && lineProg) {
           this.gl = gl
           this.pointProg = pointProg
           this.lineProg = lineProg
+          this.userProg = userProg
 
           // Dynamic VBOs updated smoothly per frame
           this.bufPtsA = gl.createBuffer()
@@ -1695,6 +1895,44 @@ export class MorphSceneEngine {
           gl.bindBuffer(gl.ARRAY_BUFFER, this.bufLinesB)
           gl.enableVertexAttribArray(1)
           gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0)
+
+          // User-clicked stars VAO
+          if (userProg) {
+            this.bufUserPos = gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserPos)
+            gl.bufferData(gl.ARRAY_BUFFER, this.userPos.byteLength, gl.DYNAMIC_DRAW)
+
+            this.bufUserSeed = gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserSeed)
+            gl.bufferData(gl.ARRAY_BUFFER, this.userSeed.byteLength, gl.DYNAMIC_DRAW)
+
+            this.bufUserSize = gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserSize)
+            gl.bufferData(gl.ARRAY_BUFFER, this.userSize.byteLength, gl.DYNAMIC_DRAW)
+
+            this.bufUserBirth = gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserBirth)
+            gl.bufferData(gl.ARRAY_BUFFER, this.userBirth.byteLength, gl.DYNAMIC_DRAW)
+
+            this.userVao = gl.createVertexArray()
+            gl.bindVertexArray(this.userVao)
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserPos)
+            gl.enableVertexAttribArray(0)
+            gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserSeed)
+            gl.enableVertexAttribArray(1)
+            gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 0, 0)
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserSize)
+            gl.enableVertexAttribArray(2)
+            gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 0, 0)
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserBirth)
+            gl.enableVertexAttribArray(3)
+            gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 0, 0)
+
+            for (const name of ['uTime', 'uMouse', 'uMouseScale', 'uRot', 'uResolution', 'uOffsetX', 'uOffsetY', 'uScale', 'uPixelRatio', 'uGalaxyFactor', 'uMaxPointSize', 'uLeftFade', 'uColor', 'uAccent', 'uOpacity']) {
+              this.uUser[name] = gl.getUniformLocation(userProg, name)
+            }
+          }
           gl.bindVertexArray(null)
 
           for (const name of ['uMorph', 'uMouse', 'uMouseScale', 'uRot', 'uResolution', 'uOffsetX', 'uOffsetY', 'uScale', 'uGalaxyFactor', 'uColor', 'uOpacity']) {
@@ -1706,7 +1944,7 @@ export class MorphSceneEngine {
 
           const ptRange = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE) as Float32Array | null
           const hwMax = ptRange && ptRange.length >= 2 ? ptRange[1] : 64
-          this.maxPointSize = Math.min(96, Math.max(32, hwMax))
+          this.maxPointSize = Math.min(128, Math.max(48, hwMax))
 
           gl.enable(gl.BLEND)
           gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
@@ -1743,6 +1981,154 @@ export class MorphSceneEngine {
     this.renderFrame()
   }
 
+  /**
+   * Spawns a new star directly beneath the clicked viewport coordinates in Scene 0.
+   * Clicks intersecting the tilted galactic disk join its spiral rotation;
+   * clicks in open sky become poised cosmic stars at the sharp focal plane.
+   */
+  public spawnStarAt(clientX: number, clientY: number): boolean {
+    if (this.destroyed || this.currentProgress > 0.72) return false
+
+    const rect = this.canvas.getBoundingClientRect()
+    const vw = rect.width || window.innerWidth || 1
+    const vh = rect.height || window.innerHeight || 1
+    const ndcX = ((clientX - rect.left) / vw) * 2 - 1
+    const ndcY = 1 - ((clientY - rect.top) / vh) * 2
+    const aspect = this.canvas.width / Math.max(1, this.canvas.height)
+
+    const v = this.lastView
+    const zCam = 4.65 + (4.25 - 4.65) * v.galaxyFactor
+    const focalLen = 2.48 + (1.82 - 2.48) * v.galaxyFactor
+    const ry = v.rotY + this.mouseX * v.mouseScaleX
+    const rx = v.rotX + this.mouseY * v.mouseScaleY
+    const cy = Math.cos(ry)
+    const sy = Math.sin(ry)
+    const cx = Math.cos(rx)
+    const sx = Math.sin(rx)
+    const invScale = 1 / Math.max(0.25, v.scale)
+
+    const rxRay = (ndcX * aspect) / focalLen
+    const ryRay = ndcY / focalLen
+
+    // Exact inverse of VERT_POINTS / VERT_USER_STARS (GLSL column-major rotX(rx) * rotY(ry))
+    const unprojectToLocal = (camDist: number): [number, number, number] => {
+      const wx = rxRay * camDist
+      const wy = ryRay * camDist
+      const wz = zCam - camDist
+
+      const x2 = (wx - v.offsetX) * invScale
+      const y2 = (wy - v.offsetY) * invScale
+      const z2 = wz * invScale
+
+      // Undo rotX(rx)
+      const y1 = y2 * cx - z2 * sx
+      const z1 = y2 * sx + z2 * cx
+      // Undo rotY(ry)
+      const lx = x2 * cy + z1 * sy
+      const lz = -x2 * sy + z1 * cy
+      return [lx, y1, lz]
+    }
+
+    const cosTiltX = Math.cos(GALAXY_TILT_X)
+    const sinTiltX = Math.sin(GALAXY_TILT_X)
+    const cosRollZ = Math.cos(GALAXY_ROLL_Z)
+    const sinRollZ = Math.sin(GALAXY_ROLL_Z)
+
+    const localToGalactic = (lx: number, ly: number, lz: number): [number, number, number] => {
+      const gx = lx * cosRollZ + ly * sinRollZ
+      const ty = -lx * sinRollZ + ly * cosRollZ
+      const gy = ty * cosTiltX + lz * sinTiltX
+      const gz = -ty * sinTiltX + lz * cosTiltX
+      return [gx, gy, gz]
+    }
+
+    // Intersect camera ray with galactic midplane (gz = 0)
+    const l0 = unprojectToLocal(0)
+    const l1 = unprojectToLocal(1)
+    const gz0 = localToGalactic(l0[0], l0[1], l0[2])[2]
+    const gz1 = localToGalactic(l1[0], l1[1], l1[2])[2]
+    const dGz = gz1 - gz0
+
+    let attachToDisk = false
+    let gxHit = 0
+    let gyHit = 0
+    let rHit = 0
+    if (Math.abs(dGz) > 1e-4) {
+      const dHit = -gz0 / dGz
+      if (dHit >= 1.65 && dHit <= 6.6) {
+        const lh = unprojectToLocal(dHit)
+        const gal = localToGalactic(lh[0], lh[1], lh[2])
+        gxHit = gal[0]
+        gyHit = gal[1]
+        rHit = Math.hypot(gxHit, gyHit)
+        if (rHit <= 4.35) {
+          attachToDisk = true
+        }
+      }
+    }
+
+    const nowT = (performance.now() - this.startTime) * 0.001
+    const idx = this.userStarCursor
+    this.userStarCursor = (idx + 1) % MAX_USER_STARS
+    if (this.userStarCount < MAX_USER_STARS) {
+      this.userStarCount++
+    }
+
+    const g = idx * 6
+    const d = idx * 4
+    // Isotropic random 3D birth drift that smoothly coasts to rest over ~3-5s so repeated
+    // clicks in one spot disperse organically into a star cluster instead of forming a line
+    const driftAngle = Math.random() * TAU
+    const driftDist = 0.16 + Math.sqrt(Math.random()) * 0.38
+    const driftX = Math.cos(driftAngle) * driftDist
+    const driftY = Math.sin(driftAngle) * driftDist
+    const driftZ = (Math.random() + Math.random() - 1) * (attachToDisk ? 0.14 : 0.24)
+    const driftDecay = 0.55 + Math.random() * 0.35
+
+    this.userDrift[d] = driftX
+    this.userDrift[d + 1] = driftY
+    this.userDrift[d + 2] = driftZ
+    this.userDrift[d + 3] = driftDecay
+
+    if (attachToDisk) {
+      this.userMeta[g] = 0
+      this.userMeta[g + 1] = gxHit
+      this.userMeta[g + 2] = gyHit
+      this.userMeta[g + 3] = 0
+      this.userMeta[g + 4] = Math.random() * TAU
+      // Subtle per-star orbital speed variance breaks up any rigid line over time
+      this.userMeta[g + 5] = GALAXY_OMEGA * (0.90 + Math.random() * 0.22)
+    } else {
+      // Open sky: place at crisp focal depth near dFocus = 4.05 with subtle depth variance
+      const dStar = 3.82 + Math.random() * 0.46
+      const [lx, ly, lz] = unprojectToLocal(dStar)
+      this.userMeta[g] = 1
+      this.userMeta[g + 1] = lx
+      this.userMeta[g + 2] = ly
+      this.userMeta[g + 3] = lz
+      this.userMeta[g + 4] = Math.random() * TAU
+      this.userMeta[g + 5] = 0.25 + Math.random() * 0.2
+    }
+
+    const o = idx * 3
+    this.userDispPos[o] = 0
+    this.userDispPos[o + 1] = 0
+    this.userDispPos[o + 2] = 0
+    this.userDispVel[o] = 0
+    this.userDispVel[o + 1] = 0
+    this.userDispVel[o + 2] = 0
+
+    this.userSeed[idx] = Math.random()
+    this.userSize[idx] = 4.8 + Math.random() * 2.8
+    this.userBirth[idx] = nowT
+    this.userAttrsDirty = true
+
+    if (this.clickRipples.length < 6) {
+      this.clickRipples.push({ ndcX, ndcY })
+    }
+    return true
+  }
+
   private resize = () => {
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     const w = this.canvas.clientWidth || window.innerWidth
@@ -1754,19 +2140,47 @@ export class MorphSceneEngine {
     }
   }
 
+  private resetPointerTracking(suppressMs = 0) {
+    this.pointerActive = false
+    this.mouseVelX = 0
+    this.mouseVelY = 0
+    this.pointerActivity = 0
+    this.lastPointerMoveTime = 0
+    if (suppressMs > 0) {
+      this.suppressPointerImpulseUntil = Math.max(
+        this.suppressPointerImpulseUntil,
+        performance.now() + suppressMs
+      )
+    }
+  }
+
   private onPointerMove = (e: PointerEvent) => {
+    const now = performance.now()
     const nx = (e.clientX / Math.max(1, window.innerWidth)) * 2 - 1
     const ny = (e.clientY / Math.max(1, window.innerHeight)) * 2 - 1
     const ndcY = -ny
-    if (this.pointerActive) {
+    const gapMs = this.lastPointerMoveTime > 0 ? now - this.lastPointerMoveTime : Infinity
+    this.lastPointerMoveTime = now
+
+    // Ignore velocity spikes caused by window refocus, tab resume, or pointer teleport jumps
+    const canApplyVelocity =
+      this.pointerActive &&
+      document.hasFocus() &&
+      now >= this.suppressPointerImpulseUntil &&
+      gapMs < 140
+
+    if (canApplyVelocity) {
       const dx = nx - this.mouseNdcX
       const dy = ndcY - this.mouseNdcY
       const moveDist = Math.hypot(dx, dy)
-      if (moveDist > 1e-4) {
+      if (moveDist > 1e-4 && moveDist < 0.35) {
         this.mouseVelX = Math.max(-0.35, Math.min(0.35, this.mouseVelX * 0.45 + dx * 0.85))
         this.mouseVelY = Math.max(-0.35, Math.min(0.35, this.mouseVelY * 0.45 + dy * 0.85))
         this.pointerActivity = Math.min(1, this.pointerActivity + Math.min(0.55, moveDist * 16 + 0.08))
       }
+    } else {
+      this.mouseVelX = 0
+      this.mouseVelY = 0
     }
     this.pointerActive = true
     this.mouseNdcX = nx
@@ -1776,7 +2190,21 @@ export class MorphSceneEngine {
   }
 
   private onPointerLeave = () => {
-    this.pointerActive = false
+    this.resetPointerTracking()
+  }
+
+  private onWindowBlur = () => {
+    this.resetPointerTracking(180)
+  }
+
+  private onWindowFocus = () => {
+    this.lastFrameTime = performance.now()
+    this.resetPointerTracking(180)
+  }
+
+  private onVisibilityChange = () => {
+    this.lastFrameTime = performance.now()
+    this.resetPointerTracking(180)
   }
 
   private onThemeChange = () => {
@@ -1789,6 +2217,10 @@ export class MorphSceneEngine {
     window.addEventListener('resize', this.resize, { passive: true })
     window.addEventListener('pointermove', this.onPointerMove, { passive: true })
     window.addEventListener('pointerleave', this.onPointerLeave, { passive: true })
+    document.addEventListener('pointerleave', this.onPointerLeave, { passive: true })
+    window.addEventListener('blur', this.onWindowBlur, { passive: true })
+    window.addEventListener('focus', this.onWindowFocus, { passive: true })
+    document.addEventListener('visibilitychange', this.onVisibilityChange)
     window.addEventListener('norb:theme-change', this.onThemeChange)
   }
 
@@ -1832,7 +2264,9 @@ export class MorphSceneEngine {
     const mX = this.mouseNdcX
     const mY = this.mouseNdcY
     const speed = Math.hypot(this.mouseVelX, this.mouseVelY)
-    const applyForce = this.pointerActive && speed > 0.0004
+    const applyForce = this.pointerActive && document.hasFocus() && speed > 0.0004
+    const hasRipples = this.clickRipples.length > 0
+    const ripples = hasRipples ? this.clickRipples : null
 
     const zCam = 4.65 + (4.25 - 4.65) * galaxyWeight
     const focalLen = 2.48 + (1.82 - 2.48) * galaxyWeight
@@ -1840,6 +2274,8 @@ export class MorphSceneEngine {
     // Subtle, delicate depth-respecting ripple (never carves an empty hole or hard rim)
     const maxRadius = 0.44
     const maxRadiusSq = maxRadius * maxRadius
+    const rippleRadius = 0.36
+    const rippleRadiusSq = rippleRadius * rippleRadius
     const invScale = 1 / Math.max(0.25, scale)
     // Smooth viscous coasting for outward push impulse (zero rubber-band bounce)
     const velDamp = Math.pow(0.89, dt60)
@@ -1855,12 +2291,12 @@ export class MorphSceneEngine {
       const by = pts[o + 1] + dispPos[o + 1]
       const bz = pts[o + 2] + dispPos[o + 2]
 
-      if (applyForce) {
+      if (applyForce || hasRipples) {
         // Match exact vertex shader rotation & wide-FOV projection
-        const x1 = bx * cy + bz * sy
-        const z1 = -bx * sy + bz * cy
-        const y2 = by * cx - z1 * sx
-        const z2 = by * sx + z1 * cx
+        const x1 = bx * cy - bz * sy
+        const z1 = bx * sy + bz * cy
+        const y2 = by * cx + z1 * sx
+        const z2 = -by * sx + z1 * cx
 
         const wx = x1 * scale + offsetX
         const wy = y2 * scale + offsetY
@@ -1870,43 +2306,61 @@ export class MorphSceneEngine {
         const ndcX = (wx * persp) / aspect
         const ndcY = wy * persp
 
-        const dx = (ndcX - mX) * aspect
-        const dy = ndcY - mY
-        const distSq = dx * dx + dy * dy
+        const depthNorm = clamp01((wz + 2.8) / 5.4)
+        const depthStrength = 0.12 + 0.88 * Math.pow(depthNorm, 1.45)
+        const organicVar = 0.55 + r1[i] * 0.90
+        const invPerspSoft = invScale / (0.55 + 0.45 * persp)
 
-        if (distSq < maxRadiusSq && distSq > 1e-6) {
-          // Depth-respecting gentle breeze: close foreground dust shifts slightly more,
-          // mid-ground spiral stars ruffle subtly, distant background stars stay nearly still.
-          const depthNorm = clamp01((wz + 2.8) / 5.4)
-          const localRadius = 0.16 + 0.28 * depthNorm
-          if (distSq < localRadius * localRadius) {
-            const dist = Math.sqrt(distSq)
-            const falloff = 1 - dist / localRadius
-            const f2 = falloff * falloff
-            const nx = dx / dist
-            const ny = dy / dist
+        let impScreenX = 0
+        let impScreenY = 0
+        let impScreenZ = 0
 
-            const depthStrength = 0.12 + 0.88 * Math.pow(depthNorm, 1.45)
-            // Organic per-star sensitivity variation breaks up any artificial circular rim
-            const organicVar = 0.55 + r1[i] * 0.90
-            const invPerspSoft = invScale / (0.55 + 0.45 * persp)
-            const radialPush = speed * 0.052 * f2 * depthStrength * organicVar * invPerspSoft * dt60
+        if (applyForce) {
+          const dx = (ndcX - mX) * aspect
+          const dy = ndcY - mY
+          const distSq = dx * dx + dy * dy
 
-            const impScreenX = nx * radialPush
-            const impScreenY = ny * radialPush
-            // Gentle away-from-camera (-Z) nudge for 3D volumetric feel
-            const impScreenZ = -0.28 * radialPush
-
-            // Inverse rotation (rotY(-ry) * rotX(-rx)) back into local galaxy space
-            const iy1 = impScreenY * cx + impScreenZ * sx
-            const iz1 = -impScreenY * sx + impScreenZ * cx
-            const lx = impScreenX * cy - iz1 * sy
-            const lz = impScreenX * sy + iz1 * cy
-
-            dispVel[o] += lx
-            dispVel[o + 1] += iy1
-            dispVel[o + 2] += lz
+          if (distSq < maxRadiusSq && distSq > 1e-6) {
+            const localRadius = 0.16 + 0.28 * depthNorm
+            if (distSq < localRadius * localRadius) {
+              const dist = Math.sqrt(distSq)
+              const falloff = 1 - dist / localRadius
+              const f2 = falloff * falloff
+              const radialPush = speed * 0.052 * f2 * depthStrength * organicVar * invPerspSoft * dt60
+              impScreenX += (dx / dist) * radialPush
+              impScreenY += (dy / dist) * radialPush
+              impScreenZ -= 0.28 * radialPush
+            }
           }
+        }
+
+        if (ripples) {
+          for (let r = 0; r < ripples.length; r++) {
+            const dx = (ndcX - ripples[r].ndcX) * aspect
+            const dy = ndcY - ripples[r].ndcY
+            const distSq = dx * dx + dy * dy
+            if (distSq < rippleRadiusSq && distSq > 1e-6) {
+              const dist = Math.sqrt(distSq)
+              const falloff = 1 - dist / rippleRadius
+              const f2 = falloff * falloff
+              const push = 0.017 * f2 * (0.35 + 0.65 * depthStrength) * organicVar * invPerspSoft
+              impScreenX += (dx / dist) * push
+              impScreenY += (dy / dist) * push
+              impScreenZ -= 0.22 * push
+            }
+          }
+        }
+
+        if (impScreenX !== 0 || impScreenY !== 0 || impScreenZ !== 0) {
+          // Exact inverse of GLSL rotX(rx) * rotY(ry) back into local galaxy space
+          const iy1 = impScreenY * cx - impScreenZ * sx
+          const iz1 = impScreenY * sx + impScreenZ * cx
+          const lx = impScreenX * cy + iz1 * sy
+          const lz = -impScreenX * sy + iz1 * cy
+
+          dispVel[o] += lx
+          dispVel[o + 1] += iy1
+          dispVel[o + 2] += lz
         }
       }
 
@@ -1938,13 +2392,170 @@ export class MorphSceneEngine {
       pts[o + 1] += dispPos[o + 1] * galaxyWeight
       pts[o + 2] += dispPos[o + 2] * galaxyWeight
     }
+    this.clickRipples.length = 0
+  }
+
+  private updateUserStars(
+    t: number,
+    galaxyWeight: number,
+    rotYBase: number,
+    rotXBase: number,
+    mouseScaleX: number,
+    mouseScaleY: number,
+    offsetX: number,
+    offsetY: number,
+    scale: number,
+    dt: number
+  ) {
+    const n = this.userStarCount
+    if (n === 0 || galaxyWeight <= 0.001) return
+
+    const cosTiltX = Math.cos(GALAXY_TILT_X)
+    const sinTiltX = Math.sin(GALAXY_TILT_X)
+    const cosRollZ = Math.cos(GALAXY_ROLL_Z)
+    const sinRollZ = Math.sin(GALAXY_ROLL_Z)
+
+    const w = Math.max(1, this.canvas.width)
+    const h = Math.max(1, this.canvas.height)
+    const aspect = w / h
+
+    const ry = rotYBase + this.mouseX * mouseScaleX
+    const rx = rotXBase + this.mouseY * mouseScaleY
+    const cy = Math.cos(ry)
+    const sy = Math.sin(ry)
+    const cx = Math.cos(rx)
+    const sx = Math.sin(rx)
+
+    const mX = this.mouseNdcX
+    const mY = this.mouseNdcY
+    const speed = Math.hypot(this.mouseVelX, this.mouseVelY)
+    const applyForce = this.pointerActive && speed > 0.0004
+    const zCam = 4.65 + (4.25 - 4.65) * galaxyWeight
+    const focalLen = 2.48 + (1.82 - 2.48) * galaxyWeight
+    const invScale = 1 / Math.max(0.25, scale)
+    const dt60 = Math.min(2.0, dt * 60)
+    const velDamp = Math.pow(0.89, dt60)
+    const maxDisp = 0.28
+    const maxDispSq = maxDisp * maxDisp
+
+    const meta = this.userMeta
+    const drift = this.userDrift
+    const pos = this.userPos
+    const dPos = this.userDispPos
+    const dVel = this.userDispVel
+
+    for (let i = 0; i < n; i++) {
+      const g = i * 6
+      const d = i * 4
+      const o = i * 3
+      const kind = meta[g]
+      const age = Math.max(0, t - this.userBirth[i])
+      // Analytical integral of decaying random birth drift: 0 at click, smoothly coasts to rest over ~3-5s
+      const driftEase = 1 - Math.exp(-age * drift[d + 3])
+      const drX = drift[d] * driftEase
+      const drY = drift[d + 1] * driftEase
+      const drZ = drift[d + 2] * driftEase
+      let bx: number
+      let by: number
+      let bz: number
+
+      if (kind < 0.5) {
+        // Orbiting with the spiral galaxy disk + decaying random 3D birth dispersion
+        const gx0 = meta[g + 1]
+        const gy0 = meta[g + 2]
+        const gz0 = meta[g + 3]
+        const bobPhase = meta[g + 4]
+        const omega = meta[g + 5]
+        const rotAng = -age * omega
+        const cA = Math.cos(rotAng)
+        const sA = Math.sin(rotAng)
+        const gxLocal = gx0 + drX
+        const gyLocal = gy0 + drY
+        const gx = gxLocal * cA - gyLocal * sA
+        const gy = gxLocal * sA + gyLocal * cA
+        const gz = gz0 + drZ + (Math.sin(age * 0.42 + bobPhase) - Math.sin(bobPhase)) * 0.022
+        const ty = gy * cosTiltX - gz * sinTiltX
+        const tz = gy * sinTiltX + gz * cosTiltX
+        bx = gx * cosRollZ - ty * sinRollZ
+        by = gx * sinRollZ + ty * cosRollZ
+        bz = tz
+      } else {
+        // Open-sky cosmic star: decaying random 3D birth drift + gentle zero-G breathing
+        const phase = meta[g + 4]
+        const rate = meta[g + 5]
+        bx = meta[g + 1] + drX + (Math.sin(age * rate + phase) - Math.sin(phase)) * 0.032
+        by = meta[g + 2] + drY + (Math.sin(age * rate * 1.25 + phase * 1.3) - Math.sin(phase * 1.3)) * 0.040
+        bz = meta[g + 3] + drZ + (Math.cos(age * rate * 0.85 + phase) - Math.cos(phase)) * 0.030
+      }
+
+      // Let newly birthed stars settle calmly for 0.35s before reacting to cursor breeze
+      if (applyForce && age > 0.35) {
+        const px = bx + dPos[o]
+        const py = by + dPos[o + 1]
+        const pz = bz + dPos[o + 2]
+        const x1 = px * cy - pz * sy
+        const z1 = px * sy + pz * cy
+        const y2 = py * cx + z1 * sx
+        const z2 = -py * sx + z1 * cx
+        const wx = x1 * scale + offsetX
+        const wy = y2 * scale + offsetY
+        const wz = z2 * scale
+        const camDist = Math.max(0.35, zCam - wz)
+        const persp = focalLen / camDist
+        const ndcX = (wx * persp) / aspect
+        const ndcY = wy * persp
+
+        const dx = (ndcX - mX) * aspect
+        const dy = ndcY - mY
+        const distSq = dx * dx + dy * dy
+        const localRadius = 0.24
+        if (distSq < localRadius * localRadius && distSq > 1e-6) {
+          const dist = Math.sqrt(distSq)
+          const falloff = 1 - dist / localRadius
+          const radialPush = speed * 0.032 * falloff * falloff * (invScale / (0.55 + 0.45 * persp)) * dt60
+          const impX = (dx / dist) * radialPush
+          const impY = (dy / dist) * radialPush
+          const impZ = -0.22 * radialPush
+          const iy1 = impY * cx - impZ * sx
+          const iz1 = impY * sx + impZ * cx
+          dVel[o] += impX * cy + iz1 * sy
+          dVel[o + 1] += iy1
+          dVel[o + 2] += -impX * sy + iz1 * cy
+        }
+      }
+
+      dVel[o] *= velDamp
+      dVel[o + 1] *= velDamp
+      dVel[o + 2] *= velDamp
+      dPos[o] += dVel[o] * dt60
+      dPos[o + 1] += dVel[o + 1] * dt60
+      dPos[o + 2] += dVel[o + 2] * dt60
+
+      const driftBack = Math.exp(-0.45 * dt)
+      dPos[o] *= driftBack
+      dPos[o + 1] *= driftBack
+      dPos[o + 2] *= driftBack
+
+      const dLenSq = dPos[o] * dPos[o] + dPos[o + 1] * dPos[o + 1] + dPos[o + 2] * dPos[o + 2]
+      if (dLenSq > maxDispSq) {
+        const s = maxDisp / Math.sqrt(dLenSq)
+        dPos[o] *= s
+        dPos[o + 1] *= s
+        dPos[o + 2] *= s
+      }
+
+      pos[o] = bx + dPos[o] * galaxyWeight
+      pos[o + 1] = by + dPos[o + 1] * galaxyWeight
+      pos[o + 2] = bz + dPos[o + 2] * galaxyWeight
+    }
   }
 
   private renderFrame() {
     if (this.destroyed) return
     const now = performance.now()
     const t = (now - this.startTime) * 0.001
-    const dt = Math.min(0.05, Math.max(0.001, (now - this.lastFrameTime) * 0.001))
+    const rawDt = (now - this.lastFrameTime) * 0.001
+    const dt = rawDt > 0.25 ? 1 / 60 : Math.min(0.05, Math.max(0.001, rawDt))
     this.lastFrameTime = now
 
     this.currentProgress += (this.targetProgress - this.currentProgress) * 0.13
@@ -2025,8 +2636,19 @@ export class MorphSceneEngine {
     const mouseScaleY = 0.24 - galaxyFactor * 0.14
     const leftFade = isNarrow ? 0 : galaxyFactor
 
+    // Snapshot latest projection state for pixel-accurate click-to-add-star unprojection
+    this.lastView.rotY = rotY
+    this.lastView.rotX = rotX
+    this.lastView.mouseScaleX = mouseScaleX
+    this.lastView.mouseScaleY = mouseScaleY
+    this.lastView.offsetX = offsetX
+    this.lastView.offsetY = offsetY
+    this.lastView.scale = scale
+    this.lastView.galaxyFactor = galaxyFactor
+
     // Apply live interactive radial push-away field to Scene 0 galaxy & dust particles
     this.applyGalaxyMouseField(galaxyFactor, rotY, rotX, mouseScaleX, mouseScaleY, offsetX, offsetY, scale, dt)
+    this.updateUserStars(t, galaxyFactor, rotY, rotX, mouseScaleX, mouseScaleY, offsetX, offsetY, scale, dt)
 
     // Monochrome ink adapts smoothly to dark mode AND "Who I am" inversion
     const effectiveLightInk = this.darkMode ? 1 - this.currentInvert : this.currentInvert
@@ -2092,9 +2714,43 @@ export class MorphSceneEngine {
       gl.uniform3f(this.uPoint.uAccent, accentR, accentG, accentB)
       gl.uniform1f(this.uPoint.uOpacity, this.opacity)
       gl.drawArrays(gl.POINTS, 0, this.count)
+
+      // User-added stars in Scene 0 (with stellar ignition glint & birth ripple)
+      if (this.userStarCount > 0 && galaxyFactor > 0.002 && this.userProg && this.userVao) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserPos)
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.userPos.subarray(0, this.userStarCount * 3))
+        if (this.userAttrsDirty) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserSeed)
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.userSeed.subarray(0, this.userStarCount))
+          gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserSize)
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.userSize.subarray(0, this.userStarCount))
+          gl.bindBuffer(gl.ARRAY_BUFFER, this.bufUserBirth)
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.userBirth.subarray(0, this.userStarCount))
+          this.userAttrsDirty = false
+        }
+
+        gl.useProgram(this.userProg)
+        gl.bindVertexArray(this.userVao)
+        gl.uniform1f(this.uUser.uTime, t)
+        gl.uniform2f(this.uUser.uMouse, this.mouseX, this.mouseY)
+        gl.uniform2f(this.uUser.uMouseScale, mouseScaleX, mouseScaleY)
+        gl.uniform2f(this.uUser.uRot, rotY, rotX)
+        gl.uniform2f(this.uUser.uResolution, this.canvas.width, this.canvas.height)
+        gl.uniform1f(this.uUser.uOffsetX, offsetX)
+        gl.uniform1f(this.uUser.uOffsetY, offsetY)
+        gl.uniform1f(this.uUser.uScale, scale)
+        gl.uniform1f(this.uUser.uPixelRatio, dpr)
+        gl.uniform1f(this.uUser.uGalaxyFactor, galaxyFactor)
+        gl.uniform1f(this.uUser.uMaxPointSize, this.maxPointSize)
+        gl.uniform1f(this.uUser.uLeftFade, leftFade)
+        gl.uniform3f(this.uUser.uColor, ink, ink, ink)
+        gl.uniform3f(this.uUser.uAccent, accentR, accentG, accentB)
+        gl.uniform1f(this.uUser.uOpacity, this.opacity)
+        gl.drawArrays(gl.POINTS, 0, this.userStarCount)
+      }
       gl.bindVertexArray(null)
     } else if (this.ctx2d) {
-      this.renderCanvas2D(effectiveMorph, rotY, rotX, mouseScaleX, mouseScaleY, offsetX, offsetY, scale, ink, lineOpacity, leftFade, galaxyFactor)
+      this.renderCanvas2D(effectiveMorph, rotY, rotX, mouseScaleX, mouseScaleY, offsetX, offsetY, scale, ink, lineOpacity, leftFade, galaxyFactor, t)
     }
   }
 
@@ -2116,7 +2772,8 @@ export class MorphSceneEngine {
     ink: number,
     lineOpacity: number,
     leftFade: number,
-    galaxyFactor: number
+    galaxyFactor: number,
+    t = 0
   ) {
     const ctx = this.ctx2d!
     const w = this.canvas.width
@@ -2197,6 +2854,31 @@ export class MorphSceneEngine {
       ctx.arc(sx2, sy2, rad, 0, TAU)
       ctx.fill()
     }
+
+    if (this.userStarCount > 0 && galaxyFactor > 0.002) {
+      for (let i = 0; i < this.userStarCount; i++) {
+        const o = i * 3
+        const [sx2, sy2, pz] = project(this.userPos[o], this.userPos[o + 1], this.userPos[o + 2])
+        const age = Math.max(0, t - this.userBirth[i])
+        const depth = Math.max(0, Math.min(1, (pz + 3.0) / 6.0))
+        const alpha = Math.min(1, (0.65 + depth * 0.35) * galaxyFactor * this.opacity)
+        const rad = Math.max(1.8, this.userSize[i] * 0.42 * dpr)
+        ctx.fillStyle = `rgba(${rgb},${rgb},${rgb},${alpha.toFixed(3)})`
+        ctx.beginPath()
+        ctx.arc(sx2, sy2, rad, 0, TAU)
+        ctx.fill()
+
+        if (age < 0.8) {
+          const rt = age / 0.8
+          const ringR = rad + (1 - Math.pow(1 - rt, 3)) * 22 * dpr
+          ctx.strokeStyle = `rgba(${rgb},${rgb},${rgb},${((1 - rt) * (1 - rt) * 0.5 * alpha).toFixed(3)})`
+          ctx.lineWidth = Math.max(1, dpr)
+          ctx.beginPath()
+          ctx.arc(sx2, sy2, ringR, 0, TAU)
+          ctx.stroke()
+        }
+      }
+    }
   }
 
   public destroy() {
@@ -2205,6 +2887,10 @@ export class MorphSceneEngine {
     window.removeEventListener('resize', this.resize)
     window.removeEventListener('pointermove', this.onPointerMove)
     window.removeEventListener('pointerleave', this.onPointerLeave)
+    document.removeEventListener('pointerleave', this.onPointerLeave)
+    window.removeEventListener('blur', this.onWindowBlur)
+    window.removeEventListener('focus', this.onWindowFocus)
+    document.removeEventListener('visibilitychange', this.onVisibilityChange)
     window.removeEventListener('norb:theme-change', this.onThemeChange)
   }
 }

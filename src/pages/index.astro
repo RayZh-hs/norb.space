@@ -1390,6 +1390,7 @@ const chapterNav = [
     }
 
     const onScroll = () => {
+      starDownEligible = false
       updateScroll()
       scheduleCorridorSettle()
     }
@@ -1399,15 +1400,47 @@ const chapterNav = [
       updateScroll()
     }
 
-    const onPointerDown = () => {
+    let starDownX = 0
+    let starDownY = 0
+    let starDownTime = 0
+    let starDownEligible = false
+    const nonStarSelector =
+      'a, button, input, textarea, select, summary, [role="button"], #site-header, #chapter-rail'
+
+    const onPointerDown = (e: PointerEvent) => {
       isPointerDown = true
       clearSettleTimer()
+
+      const isPrimary = e.pointerType !== 'mouse' || e.button === 0
+      const target = e.target as Element | null
+      starDownEligible =
+        isPrimary &&
+        introFinished &&
+        performance.now() - introDoneAt > 150 &&
+        lastSceneProgress < 0.72 &&
+        !(target && target.closest(nonStarSelector))
+      if (starDownEligible) {
+        starDownX = e.clientX
+        starDownY = e.clientY
+        starDownTime = performance.now()
+      }
     }
-    const onPointerUp = () => {
+    const onPointerUp = (e: PointerEvent) => {
       isPointerDown = false
       scheduleCorridorSettle()
+
+      if (starDownEligible) {
+        starDownEligible = false
+        const moveDist = Math.hypot(e.clientX - starDownX, e.clientY - starDownY)
+        const elapsed = performance.now() - starDownTime
+        const hasSelection = (window.getSelection()?.toString().length ?? 0) > 0
+        if (moveDist < 8 && elapsed < 450 && !hasSelection && lastSceneProgress < 0.72) {
+          engine?.spawnStarAt(e.clientX, e.clientY)
+        }
+      }
     }
     const onInputCancelSettle = () => {
+      starDownEligible = false
       clearSettleTimer()
     }
 

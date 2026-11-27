@@ -1,18 +1,134 @@
-name: Update on Remote Server
+name: Update on Remote Servers
 
 on:
   push:
     branches: [ main, master ]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-norb-space
+  cancel-in-progress: false
 
 jobs:
-  update:
+  update-webhook:
+    name: Trigger Update Webhook
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 3
     steps:
-    - name: Trigger update webhook
-      run: |
-        curl -X POST \
-          https://api.norb.space/update/norb.space \
-          -H "Authorization: Bearer ${{ secrets.API_UPDATE_TOKEN }}" \
-          -H "Content-Type: application/json" \
-          -d '{}'
+      - name: Trigger update webhook
+        run: |
+          curl -fsS --max-time 30 -X POST \
+            https://api.norb.space/update/norb.space \
+            -H "Authorization: Bearer ${{ secrets.API_UPDATE_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{}'
+
+  deploy-servers:
+    name: Build & Deploy to Edge Servers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build site
+        run: pnpm run build
+
+      - name: Package release bundle
+        run: |
+          set -euo pipefail
+          TAR_ITEMS=(dist package.json)
+          if [[ -d src/content/download ]]; then
+            TAR_ITEMS+=(src/content/download)
+          fi
+          tar -czf /tmp/release.tar.gz "${TAR_ITEMS[@]}"
+          ls -lh /tmp/release.tar.gz
+
+      - name: Deploy release to both servers
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          SERVER_1_HOST: ${{ secrets.DEPLOY_SERVER_1_HOST }}
+          SERVER_1_PORT: ${{ secrets.DEPLOY_SERVER_1_PORT }}
+          SERVER_2_HOST: ${{ secrets.DEPLOY_SERVER_2_HOST }}
+          SERVER_2_PORT: ${{ secrets.DEPLOY_SERVER_2_PORT }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+
+          LOCK_HASH="$(sha256sum pnpm-lock.yaml | cut -c1-16)"
+          RELEASE_ID="${GITHUB_SHA::12}-${GITHUB_RUN_NUMBER}"
+
+          SSH_OPTS=(
+            -i "$HOME/.ssh/id_ed25519"
+            -o BatchMode=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts"
+            -o ConnectTimeout=15
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+          )
+
+          ensure_deps_tarball() {
+            if [[ ! -f /tmp/deps.tar.gz ]]; then
+              echo "Building production node_modules archive for lock hash ${LOCK_HASH}..."
+              rm -rf /tmp/prod-deps
+              mkdir -p /tmp/prod-deps
+              cp package.json pnpm-lock.yaml /tmp/prod-deps/
+              (cd /tmp/prod-deps && pnpm install --prod --frozen-lockfile)
+              tar -czf /tmp/deps.tar.gz -C /tmp/prod-deps node_modules
+              ls -lh /tmp/deps.tar.gz
+            fi
+          }
+
+          deploy_target() {
+            local label="$1"
+            local host="$2"
+            local port="$3"
+
+            if [[ -z "$host" ]]; then
+              echo "::error::Missing host secret for ${label}"
+              return 1
+            fi
+            port="${port:-22}"
+
+            echo "=== Deploying ${RELEASE_ID} to ${label} ==="
+            if ! ssh "${SSH_OPTS[@]}" -p "$port" "norb-deploy@${host}" "has-deps ${LOCK_HASH}"; then
+              ensure_deps_tarball
+              ssh "${SSH_OPTS[@]}" -p "$port" "norb-deploy@${host}" "upload-deps ${LOCK_HASH}" < /tmp/deps.tar.gz
+            fi
+
+            ssh "${SSH_OPTS[@]}" -p "$port" "norb-deploy@${host}" "deploy ${RELEASE_ID} ${LOCK_HASH}" < /tmp/release.tar.gz
+          }
+
+          FAILED=0
+          deploy_target "server-1" "$SERVER_1_HOST" "$SERVER_1_PORT" || FAILED=1
+          deploy_target "server-2" "$SERVER_2_HOST" "$SERVER_2_PORT" || FAILED=1
+
+          if (( FAILED != 0 )); then
+            echo "::error::One or more server deployments failed."
+            exit 1
+          fi
+
+      - name: Cleanup SSH material
+        if: always()
+        run: rm -rf "$HOME/.ssh/id_ed25519" /tmp/release.tar.gz /tmp/deps.tar.gz /tmp/prod-deps
