@@ -1,13 +1,13 @@
 /* Font */
 @font-face {
   font-family: 'Satoshi';
-  src: url('/fonts/Satoshi-Variable.ttf');
+  src: url('../fonts/Satoshi-Variable.woff2') format('woff2');
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Satoshi';
-  src: url('/fonts/Satoshi-VariableItalic.ttf');
+  src: url('../fonts/Satoshi-VariableItalic.woff2') format('woff2');
   font-style: italic;
   font-display: swap;
 }
@@ -19,7 +19,8 @@ html {
 
 @font-face {
   font-family: 'Ubuntu';
-  src: url('/fonts/Ubuntu-Regular.ttf');
+  src: url('../fonts/Ubuntu-Regular.woff2') format('woff2');
+  font-display: swap;
 }
 
 /* Theme — Minimalist Monochrome with Subtle Slate Accent */

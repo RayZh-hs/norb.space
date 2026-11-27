@@ -24,7 +24,7 @@ jobs:
             -d '{}'
 
   deploy-servers:
-    name: Build & Deploy to Edge Servers
+    name: Build, Publish Asset CDN & Deploy to Edge Servers
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -42,11 +42,93 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
 
+      - name: Detect CDN configuration
+        id: cdn
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CDN_URL: ${{ vars.CDN_URL }}
+          CF_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$CLOUDFLARE_API_TOKEN" && -n "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            RESOLVED_CDN="${CDN_URL:-https://cdn.norb.space}"
+            RESOLVED_CDN="${RESOLVED_CDN%/}"
+            RESOLVED_PROJECT="${CF_PAGES_PROJECT:-norb-space-cdn}"
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "public_cdn_url=${RESOLVED_CDN}" >> "$GITHUB_OUTPUT"
+            echo "project=${RESOLVED_PROJECT}" >> "$GITHUB_OUTPUT"
+            echo "Asset CDN enabled: ${RESOLVED_CDN} (Cloudflare Pages project: ${RESOLVED_PROJECT})"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "public_cdn_url=" >> "$GITHUB_OUTPUT"
+            echo "project=" >> "$GITHUB_OUTPUT"
+            echo "::notice::Cloudflare Pages secrets (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID) not set yet; building with same-origin assets."
+          fi
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build site
+        env:
+          PUBLIC_CDN_URL: ${{ steps.cdn.outputs.public_cdn_url }}
         run: pnpm run build
+
+      - name: Publish static assets to Cloudflare Pages CDN
+        if: steps.cdn.outputs.enabled == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_PAGES_PROJECT: ${{ steps.cdn.outputs.project }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/cdn-assets
+          mkdir -p /tmp/cdn-assets
+
+          # Copy only static asset directories (never duplicate site HTML on cdn.norb.space)
+          for dir in _astro fonts images icons favicon scripts styles pagefind; do
+            if [[ -d "dist/client/${dir}" ]]; then
+              cp -a "dist/client/${dir}" "/tmp/cdn-assets/${dir}"
+            fi
+          done
+
+          cat > /tmp/cdn-assets/robots.txt <<'EOF'
+          User-agent: *
+          Disallow: /
+          EOF
+
+          cat > /tmp/cdn-assets/_headers <<'EOF'
+          /*
+            X-Robots-Tag: noindex
+            Access-Control-Allow-Origin: *
+            Timing-Allow-Origin: *
+
+          /_astro/*
+            Cache-Control: public, max-age=31536000, immutable
+
+          /fonts/*
+            Cache-Control: public, max-age=31536000, immutable
+
+          /images/*
+            Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+          /icons/*
+            Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+          /favicon/*
+            Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+          /styles/*
+            Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+          /scripts/*
+            Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+          EOF
+
+          npx --yes wrangler@4 pages deploy /tmp/cdn-assets \
+            --project-name "$CF_PAGES_PROJECT" \
+            --branch main \
+            --commit-dirty=true
 
       - name: Package release bundle
         run: |
@@ -129,6 +211,6 @@ jobs:
             exit 1
           fi
 
-      - name: Cleanup SSH material
+      - name: Cleanup temporary files
         if: always()
-        run: rm -rf "$HOME/.ssh/id_ed25519" /tmp/release.tar.gz /tmp/deps.tar.gz /tmp/prod-deps
+        run: rm -rf "$HOME/.ssh/id_ed25519" /tmp/release.tar.gz /tmp/deps.tar.gz /tmp/prod-deps /tmp/cdn-assets

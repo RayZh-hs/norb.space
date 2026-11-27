@@ -3,6 +3,8 @@ import { ClientRouter } from 'astro:transitions'
 
 import { prod } from 'astro-pure/server'
 import type { SiteMeta } from 'astro-pure/types'
+import satoshiRegularUrl from '@/assets/fonts/Satoshi-Variable.woff2?url'
+import satoshiItalicUrl from '@/assets/fonts/Satoshi-VariableItalic.woff2?url'
 import config from '@/site-config'
 
 type Props = SiteMeta
@@ -12,6 +14,8 @@ const { articleDate, description, ogImage, title } = Astro.props
 const siteTitle = `${title} ${config.titleDelimiter} ${config.title}`
 const canonicalURL = new URL(Astro.url.pathname, Astro.site)
 const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', Astro.url).href
+const cdnOrigin = (import.meta.env.PUBLIC_CDN_URL || '').trim().replace(/\/$/, '')
+const withCdn = (url: string) => (cdnOrigin && url.startsWith('/') ? `${cdnOrigin}${url}` : url)
 ---
 
 <meta charset='utf-8' />
@@ -19,19 +23,34 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', As
 <meta content='IE=edge' http-equiv='X-UA-Compatible' />
 <title>{siteTitle}</title>
 
+{
+  cdnOrigin && (
+    <>
+      <link rel='preconnect' href={cdnOrigin} crossorigin />
+      <link rel='dns-prefetch' href={cdnOrigin} />
+    </>
+  )
+}
+
 {/* Icons / Favicon */}
-<link rel='apple-touch-icon' sizes='180x180' href='/favicon/apple-touch-icon.png' />
-<link rel='icon' type='image/png' sizes='32x32' href='/favicon/favicon-32x32.png' />
-<link rel='icon' type='image/png' sizes='16x16' href='/favicon/favicon-16x16.png' />
+<link rel='apple-touch-icon' sizes='180x180' href={withCdn('/favicon/apple-touch-icon.png')} />
+<link rel='icon' type='image/png' sizes='32x32' href={withCdn('/favicon/favicon-32x32.png')} />
+<link rel='icon' type='image/png' sizes='16x16' href={withCdn('/favicon/favicon-16x16.png')} />
 <link rel='manifest' href='/favicon/site.webmanifest' />
 
 {/* Font preloads */}
-<link rel='preload' href='/fonts/Satoshi-Variable.ttf' as='font' type='font/ttf' crossorigin />
 <link
   rel='preload'
-  href='/fonts/Satoshi-VariableItalic.ttf'
+  href={withCdn(satoshiRegularUrl)}
   as='font'
-  type='font/ttf'
+  type='font/woff2'
+  crossorigin
+/>
+<link
+  rel='preload'
+  href={withCdn(satoshiItalicUrl)}
+  as='font'
+  type='font/woff2'
   crossorigin
 />
 
@@ -86,7 +105,7 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', As
 <meta content={Astro.generator} name='generator' />
 
 {/* Styles */}
-<link rel='stylesheet' href='/styles/global.css' />
+<link rel='stylesheet' href={withCdn('/styles/global.css')} />
 
 {/* View transitions */}
 <ClientRouter />

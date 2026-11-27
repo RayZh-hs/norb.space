@@ -21,12 +21,15 @@ import { remarkThemeImages } from './src/plugins/remark-theme-images.ts';
 import { addCopyButton, addLanguage, addTitle, transformerNotationDiff, transformerNotationHighlight, updateStyle } from './src/plugins/shiki-transformers.ts';
 import config from './src/site.config.ts';
 
+const cdnOrigin = (process.env.PUBLIC_CDN_URL || '').trim().replace(/\/$/, '');
+
 // https://astro.build/config
 export default defineConfig({
   // Top-Level Options
-  site: 'https://astro-pure.js.org',
+  site: 'https://norb.space',
   // base: '/docs',
   trailingSlash: 'never',
+  ...(cdnOrigin ? { build: { assetsPrefix: cdnOrigin } } : {}),
 
   // Adapter
   // https://docs.astro.build/en/guides/deploy/
