@@ -723,7 +723,7 @@ const chapterNav = [
 
     const canvas = document.getElementById('morph-canvas') as HTMLCanvasElement | null
     const engine = canvas
-      ? new MorphSceneEngine({ canvas, particleCount: 3000, linePairs: 260 })
+      ? new MorphSceneEngine({ canvas, particleCount: 3600, linePairs: 260 })
       : null
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 

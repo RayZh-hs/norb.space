@@ -107,6 +107,11 @@ interface SceneData {
   r1: Float32Array
   r2: Float32Array
   r3: Float32Array
+  // Scene 0: Precomputed cohesive spiral galaxy + 3D floating dust field (6 floats per point)
+  // Layout per particle i (stride 6):
+  //   Disk particle (kind 0): [0, rad, baseAng, gz, bobPhase, omega]
+  //   Ambient 3D dust (kind 1): [1, baseX, baseY, baseZ, driftSpeed, bobPhase]
+  galaxyData: Float32Array
   // Scene 1: `</>` edges split by part (0: left '<', 1: slash '/', 2: right '>', 3: code bars)
   devEdges: { seg: Seg3; part: number }[]
   // Scene 2: Neural network nodes & connections
@@ -132,6 +137,99 @@ function buildSceneData(count: number): SceneData {
     r1[i] = rand()
     r2[i] = rand()
     r3[i] = rand()
+  }
+
+  // --- Scene 0: Cohesive Grand-Design Spiral Galaxy + Full-Screen 3D Dust Field ---
+  const galRand = mulberry32(733191)
+  const gauss = () => {
+    const u1 = Math.max(1e-5, galRand())
+    const u2 = galRand()
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(u2 * TAU)
+  }
+  const galaxyData = new Float32Array(count * 6)
+  const diskCount = Math.floor(count * 0.78)
+  const outerDustCount = Math.floor(count * 0.89)
+
+  for (let i = 0; i < count; i++) {
+    const g = i * 6
+    if (i < diskCount) {
+      // Continuous seamless distribution from radiant galactic core -> 2 tight grand-design primary arms
+      // (+ 2 subtle secondary inter-arm spurs). Zero circular core boundary!
+      const u = galRand()
+      const rad = Math.pow(u, 1.52) * 3.80
+      const rNorm = rad / 3.80
+
+      const isPrimary = galRand() < 0.76
+      const armPair = i % 2
+      const armOffset = isPrimary
+        ? armPair * Math.PI
+        : armPair * Math.PI + Math.PI * 0.50
+
+      // Smooth logarithmic spiral winding well-defined right down to r = 0
+      const spiralTwist = Math.log(1.0 + rad * 1.95) * 2.75
+
+      // Near r = 0, angular scatter widens seamlessly into an organic glowing nucleus;
+      // further out, stars condense into crisp, sweeping grand-design spiral ribbons with soft Gaussian edges.
+      const coreBlend = Math.exp(-rad * 2.25)
+      const armWidth = (isPrimary ? 0.09 : 0.21) + rNorm * (isPrimary ? 0.14 : 0.20) + coreBlend * 0.92
+      const angScatter = gauss() * armWidth
+      const radJitter = gauss() * (0.028 + rNorm * 0.105)
+      const rEff = Math.max(0.012, rad + radJitter)
+      const baseAng = armOffset + spiralTwist + angScatter
+
+      // Lenticular galactic bulge smoothly tapering into a crisp thin spiral plane
+      const diskThick = 0.040 + 0.22 * Math.exp(-rEff * rEff * 1.50) + 0.028 * rEff
+      const gz = gauss() * diskThick
+
+      // Cohesive pattern speed keeps spiral arms permanently intact (no shearing apart)
+      galaxyData[g] = 0
+      galaxyData[g + 1] = rEff
+      galaxyData[g + 2] = baseAng
+      galaxyData[g + 3] = gz
+      galaxyData[g + 4] = galRand() * TAU
+      galaxyData[g + 5] = 0.064
+    } else if (i < outerDustCount) {
+      // Extended outer galactic dust halo orbiting broadly around the tilted plane
+      const u = Math.pow(galRand(), 0.78)
+      const rad = 0.85 + u * 3.85
+      const baseAng = galRand() * TAU
+      const gz = gauss() * (0.24 + u * 0.52)
+      galaxyData[g] = 0
+      galaxyData[g + 1] = rad
+      galaxyData[g + 2] = baseAng
+      galaxyData[g + 3] = gz
+      galaxyData[g + 4] = galRand() * TAU
+      galaxyData[g + 5] = 0.046 + (1 - u) * 0.018
+    } else {
+      // Full-screen 3D floating ambient cosmic dust (foreground bokeh + deep background haze)
+      // Spans wide across X so particles drift continuously across the entire viewport
+      const layerPick = galRand()
+      let bz: number
+      if (layerPick < 0.48) {
+        // Near foreground bokeh layer sweeping right past the camera
+        bz = 1.45 + galRand() * 1.80
+      } else if (layerPick < 0.82) {
+        // Deep background atmospheric dust
+        bz = -1.30 - galRand() * 2.15
+      } else {
+        // Mid-field floating dust around the focal plane
+        bz = (galRand() - 0.5) * 2.4
+      }
+      // Closer dust needs narrower world-X to span full NDC width; deeper dust spans wider.
+      // Offset gently toward upper-left relative to the bottom-right galaxy core so ambient dust fills 100% of the screen.
+      const xSpan = bz > 0 ? 3.4 - bz * 0.35 : 4.6 - bz * 0.35
+      const bx = (galRand() * 2 - 1) * xSpan - 0.72
+      const by = (galRand() * 2 - 1) * (bz > 0 ? 1.65 : 2.35) + 0.18
+      // Foreground drifts gently left-to-right (+), far background drifts right-to-left (-)
+      const dir = bz >= 0 ? 1 : -1
+      const driftSpeed = dir * (0.085 + galRand() * 0.105)
+      galaxyData[g] = 1
+      galaxyData[g + 1] = bx
+      galaxyData[g + 2] = by
+      galaxyData[g + 3] = bz
+      galaxyData[g + 4] = driftSpeed
+      galaxyData[g + 5] = galRand() * TAU
+    }
   }
 
   // --- Scene 1: Crisp 3D extruded `</>` code brackets ---
@@ -326,7 +424,7 @@ function buildSceneData(count: number): SceneData {
     }
   }
 
-  return { r0, r1, r2, r3, devEdges, nnNodes, nnEdges, crystalVerts, crystalEdges, camBodyEdges, icoEdges }
+  return { r0, r1, r2, r3, galaxyData, devEdges, nnNodes, nnEdges, crystalVerts, crystalEdges, camBodyEdges, icoEdges }
 }
 
 /**
@@ -335,8 +433,8 @@ function buildSceneData(count: number): SceneData {
  */
 function getSceneCamera(sceneIdx: number, t: number): [number, number] {
   switch (sceneIdx) {
-    case 0: // Hero Infinite Galaxy — serene cosmic drift so mouse interaction shines
-      return [Math.sin(t * 0.14) * 0.14, 0.08 + Math.cos(t * 0.11) * 0.06]
+    case 0: // Hero Panoramic Galaxy — subtle cosmic drift preserving steep nearly-vertical disk
+      return [Math.sin(t * 0.11) * 0.09, 0.02 + Math.cos(t * 0.09) * 0.035]
     case 1: // Student Developer `</>` — stay front-facing so brackets never mirror!
       return [Math.sin(t * 0.42) * 0.28, 0.08 + Math.cos(t * 0.31) * 0.07]
     case 2: // Frontier Researcher neural network — clear 3/4 perspective separating layers
@@ -371,81 +469,79 @@ function evaluateScene(
   const { r0, r1, r2, r3 } = data
 
   // =========================================================================
-  // SCENE 0: HERO — Infinite Spiral Galaxy occupying the entire RHS
+  // SCENE 0: HERO — Nearly-Perpendicular Panoramic Spiral Galaxy & Floating 3D Dust
   // =========================================================================
   if (sceneIdx === 0) {
-    // Open, flattering galactic tilt (~36 deg around X, ~-16 deg around Z)
-    const cosTiltX = 0.8090
-    const sinTiltX = 0.5878
-    const cosTiltZ = 0.9613
-    const sinTiltZ = -0.2756
+    // Disk tilted ~65 deg from face-on (steep panoramic depth with clear sweeping spiral arms)
+    // with a subtle +7 deg diagonal roll so the galaxy sits balanced in the bottom-right
+    // while foreground dust sweeps across the screen and far arms recede into depth.
+    const tiltX = 1.135 // ~65.0 deg
+    const rollZ = 0.12 // ~+6.9 deg subtle diagonal sweep
+    const cosTiltX = Math.cos(tiltX)
+    const sinTiltX = Math.sin(tiltX)
+    const cosRollZ = Math.cos(rollZ)
+    const sinRollZ = Math.sin(rollZ)
 
-    const coreCount = Math.floor(count * 0.16)
-    const armCount = Math.floor(count * 0.72)
-    const numArms = 4
-
+    const gd = data.galaxyData
     for (let i = 0; i < count; i++) {
       const o = i * 3
-      let gx = 0
-      let gy = 0
-      let gz = 0
+      const g = i * 6
+      const kind = gd[g]
 
-      if (i < coreCount) {
-        // Radiant, concentrated galactic bulge with brisk inner rotation
-        const rad = Math.pow(r0[i], 0.76) * 0.62
-        const ang = r1[i] * TAU + t * (0.30 / (0.30 + rad))
-        const thick = (r2[i] + r3[i] - 1.0) * 0.18 * (1 - rad * 0.55)
-        gx = Math.cos(ang) * rad
-        gy = Math.sin(ang) * rad
-        gz = thick
-      } else if (i < armCount) {
-        // 4 crisp, high-density logarithmic spiral arms sweeping across the RHS
-        const arm = i % numArms
-        const u = Math.pow(r0[i], 0.84)
-        const rad = 0.22 + u * 2.48
-        const omega = 0.22 / (0.44 + Math.pow(rad, 0.65))
-        const spiralAng = (arm / numArms) * TAU + Math.log(rad + 0.30) * 2.85 + t * omega
-        // Concentrated luminous arm spine with soft starry edge halo
-        const scatterA = (r1[i] + r2[i] - 1.0) * (0.10 + u * 0.38)
-        const scatterR = (r3[i] - 0.5) * (0.07 + u * 0.26)
-        const rEff = Math.max(0.14, rad + scatterR)
-        const ang = spiralAng + scatterA
-        gx = Math.cos(ang) * rEff
-        gy = Math.sin(ang) * rEff
-        gz = (r1[i] - r2[i]) * (0.09 + 0.14 / (1 + rad * 0.8))
+      if (kind < 0.5) {
+        // Cohesive grand-design spiral disk + outer galactic halo
+        const rad = gd[g + 1]
+        const baseAng = gd[g + 2]
+        const gzBase = gd[g + 3]
+        const bobPhase = gd[g + 4]
+        const omega = gd[g + 5]
+
+        // Clockwise orbital drift: near foreground (gy > 0) glides smoothly left-to-right across screen
+        const ang = baseAng - t * omega
+        const gx = Math.cos(ang) * rad
+        const gy = Math.sin(ang) * rad
+        const gz = gzBase + Math.sin(t * 0.42 + bobPhase) * 0.028
+
+        // Tilt nearly perpendicular to screen (around X), then slight diagonal roll (around Z)
+        const ty = gy * cosTiltX - gz * sinTiltX
+        const tz = gy * sinTiltX + gz * cosTiltX
+        pts[o] = gx * cosRollZ - ty * sinRollZ
+        pts[o + 1] = gx * sinRollZ + ty * cosRollZ
+        pts[o + 2] = tz
       } else {
-        // Infinite outer galactic halo & starfield bleeding cleanly off top/right/bottom edges
-        const u = Math.pow(r0[i], 0.66)
-        const rad = 0.50 + u * 3.45
-        const ang = r1[i] * TAU + t * (0.020 + (1 - u) * 0.045)
-        gx = Math.cos(ang) * rad + 0.28
-        gy = Math.sin(ang) * rad * 1.06
-        gz = (r2[i] - 0.5) * (0.42 + u * 0.78)
+        // Full-screen 3D floating cosmic dust (smooth horizontal wrap across viewport)
+        const bx = gd[g + 1]
+        const by = gd[g + 2]
+        const bz = gd[g + 3]
+        const driftSpeed = gd[g + 4]
+        const bobPhase = gd[g + 5]
+
+        const wrapHalf = bz > 0 ? 3.4 - bz * 0.35 : 4.4 - bz * 0.35
+        const span = wrapHalf * 2
+        const rawX = bx + t * driftSpeed + wrapHalf
+        const wx = (((rawX % span) + span) % span) - wrapHalf
+        const wy = by + Math.sin(t * 0.38 + bobPhase) * 0.09
+        const wz = bz + Math.cos(t * 0.27 + bobPhase) * 0.06
+
+        pts[o] = wx * cosRollZ - wy * sinRollZ * 0.35
+        pts[o + 1] = wx * sinRollZ * 0.35 + wy
+        pts[o + 2] = wz
       }
-
-      // Tilt galaxy plane in 3D space
-      const ty = gy * cosTiltX - gz * sinTiltX
-      const tz = gy * sinTiltX + gz * cosTiltX
-      const rx = gx * cosTiltZ - ty * sinTiltZ
-      const ry = gx * sinTiltZ + ty * cosTiltZ
-
-      pts[o] = rx
-      pts[o + 1] = ry
-      pts[o + 2] = tz
     }
 
-    // Seed spiral line trajectories (line opacity fades to 0 in Scene 0, smoothly
-    // emerging from the galaxy arms only as the user scrolls toward Scene 1)
+    // Seed spiral line trajectories along the 2 grand-design arms (hidden in Scene 0,
+    // smoothly emerging from the tilted spiral arms only as user scrolls toward Scene 1)
+    const numArms = 2
     const perArm = Math.max(1, Math.floor(linePairs / numArms))
     let li = 0
     for (let arm = 0; arm < numArms && li < linePairs; arm++) {
       for (let s = 0; s < perArm && li < linePairs; s++, li++) {
         const u0 = s / perArm
         const u1 = (s + 1) / perArm
-        const rA = 0.24 + u0 * 2.15
-        const rB = 0.24 + u1 * 2.15
-        const a0 = (arm / numArms) * TAU + Math.log(rA + 0.30) * 2.85 + t * 0.06
-        const a1 = (arm / numArms) * TAU + Math.log(rB + 0.30) * 2.85 + t * 0.06
+        const rA = Math.pow(u0, 1.25) * 3.1
+        const rB = Math.pow(u1, 1.25) * 3.1
+        const a0 = arm * Math.PI + Math.log(1.0 + rA * 1.95) * 2.75 - t * 0.064
+        const a1 = arm * Math.PI + Math.log(1.0 + rB * 1.95) * 2.75 - t * 0.064
         const gx0 = Math.cos(a0) * rA, gy0 = Math.sin(a0) * rA
         const gx1 = Math.cos(a1) * rB, gy1 = Math.sin(a1) * rB
         const ty0 = gy0 * cosTiltX, tz0 = gy0 * sinTiltX
@@ -453,11 +549,11 @@ function evaluateScene(
         writeSeg(
           lines,
           li,
-          gx0 * cosTiltZ - ty0 * sinTiltZ,
-          gx0 * sinTiltZ + ty0 * cosTiltZ,
+          gx0 * cosRollZ - ty0 * sinRollZ,
+          gx0 * sinRollZ + ty0 * cosRollZ,
           tz0,
-          gx1 * cosTiltZ - ty1 * sinTiltZ,
-          gx1 * sinTiltZ + ty1 * cosTiltZ,
+          gx1 * cosRollZ - ty1 * sinRollZ,
+          gx1 * sinRollZ + ty1 * cosRollZ,
           tz1
         )
       }
@@ -1229,14 +1325,18 @@ uniform vec2 uMouseScale;
 uniform vec2 uRot;
 uniform vec2 uResolution;
 uniform float uOffsetX;
+uniform float uOffsetY;
 uniform float uScale;
 uniform float uPixelRatio;
 uniform float uGalaxyFactor;
+uniform float uMaxPointSize;
 
 out float vDepth;
 out float vSeed;
 out float vSizeNorm;
 out float vNdcX;
+out float vBlur;
+out float vNearFade;
 
 mat3 rotY(float a) {
   float c = cos(a), s = sin(a);
@@ -1266,22 +1366,43 @@ void main() {
   pos = rotX(rx) * rotY(ry) * pos;
   pos *= uScale;
   pos.x += uOffsetX;
+  pos.y += uOffsetY;
 
-  float zCam = 4.65;
-  float persp = 2.48 / max(0.65, zCam - pos.z);
+  // Wider cinematic FOV in Scene 0 for strong foreground-to-background perspective depth
+  float zCam = mix(4.65, 4.25, uGalaxyFactor);
+  float focalLen = mix(2.48, 1.82, uGalaxyFactor);
+  float camDist = max(0.35, zCam - pos.z);
+  float persp = focalLen / camDist;
   float aspect = uResolution.x / max(uResolution.y, 1.0);
   vec2 ndc = vec2((pos.x * persp) / aspect, pos.y * persp);
 
   gl_Position = vec4(ndc, clamp(-pos.z * 0.1, -0.95, 0.95), 1.0);
-  vDepth = clamp((pos.z + 2.2) / 4.4, 0.0, 1.0);
+  vDepth = clamp((pos.z + 3.0) / 6.0, 0.0, 1.0);
   vSeed = aSeed;
-  vSizeNorm = clamp((aSize - 1.5) / 9.5, 0.0, 1.0);
+  vSizeNorm = clamp((aSize - 1.5) / 8.5, 0.0, 1.0);
   vNdcX = ndc.x;
 
-  float depthScale = 0.68 + vDepth * 0.68;
-  float galaxyBoost = mix(1.0, 1.38, uGalaxyFactor);
-  float minPt = mix(1.7, 2.35, uGalaxyFactor) * uPixelRatio;
-  gl_PointSize = clamp(aSize * depthScale * galaxyBoost * (persp * 1.16) * uPixelRatio, minPt, 24.0);
+  // Thin-lens Depth of Field (Circle of Confusion) active in Scene 0:
+  // Sharp at focal plane (dFocus = 4.05, right through galaxy core & mid-arms);
+  // progressively blurry for BOTH close foreground dust and far-away background dust.
+  float dFocus = 4.05;
+  float cocNear = max(0.0, (dFocus - camDist) / camDist);
+  float cocFar = max(0.0, ((camDist - dFocus) / camDist) * 1.95);
+  float coc = max(0.0, max(cocNear, cocFar) - 0.11);
+  float blur = clamp(coc * 0.92, 0.0, 1.0) * uGalaxyFactor;
+  vBlur = blur;
+  vNearFade = mix(1.0, smoothstep(0.42, 1.10, camDist), uGalaxyFactor);
+
+  // Non-galaxy scenes (1-7) preserve exact crisp sculpture point sizing
+  float sculptDepthScale = 0.68 + clamp((pos.z + 2.2) / 4.4, 0.0, 1.0) * 0.68;
+  float sculptSize = clamp(aSize * sculptDepthScale * (persp * 1.16) * uPixelRatio, 1.7 * uPixelRatio, 24.0);
+
+  // Scene 0 galaxy sizing: perspective-scaled base + optical bokeh Circle of Confusion expansion
+  float nearBias = step(camDist, dFocus);
+  float bokehExpand = blur * mix(7.2 + vSizeNorm * 5.6, 16.0 + vSizeNorm * 19.0, nearBias);
+  float galSize = clamp((aSize * (persp * 1.84) + bokehExpand) * uPixelRatio, 2.0 * uPixelRatio, uMaxPointSize);
+
+  gl_PointSize = mix(sculptSize, galSize, uGalaxyFactor);
 }
 `
 
@@ -1291,6 +1412,8 @@ in float vDepth;
 in float vSeed;
 in float vSizeNorm;
 in float vNdcX;
+in float vBlur;
+in float vNearFade;
 uniform float uTime;
 uniform float uGalaxyFactor;
 uniform float uLeftFade;
@@ -1303,12 +1426,21 @@ void main() {
   vec2 c = gl_PointCoord - 0.5;
   float r = length(c);
   if (r > 0.5) discard;
-  float disc = smoothstep(0.5, mix(0.30, 0.22, uGalaxyFactor), r);
-  float depthAlpha = mix(0.44 + vDepth * 0.54, 0.72 + vDepth * 0.28, uGalaxyFactor);
+
+  // Sharp star/node profile vs soft Gaussian bokeh disc when defocused (close or far)
+  float sharpDisc = smoothstep(0.5, mix(0.30, 0.24, uGalaxyFactor), r);
+  float blurDisc = exp(-r * r * 13.0) * smoothstep(0.5, 0.11, r);
+  float disc = mix(sharpDisc, blurDisc, vBlur);
+
+  // Optical bokeh energy conservation + crisp focal-plane core/arm sparkle
+  float dofAlpha = mix(1.0, 0.35, pow(vBlur, 0.78));
+  float focusPop = mix(1.0, 1.0 + (1.0 - vBlur) * 0.22, uGalaxyFactor);
+  float depthAlpha = mix(0.44 + vDepth * 0.54, 0.44 + vDepth * 0.56, uGalaxyFactor);
   float tierBoost = mix(0.88, 1.0, vSizeNorm);
-  float twinkle = mix(1.0, 0.84 + 0.16 * sin(uTime * (1.2 + vSeed * 2.2) + vSeed * 52.0), uGalaxyFactor);
-  float leftMask = mix(1.0, smoothstep(-0.46, -0.02, vNdcX), uLeftFade);
-  float alpha = min(1.0, disc * depthAlpha * tierBoost * twinkle * mix(1.0, 1.25, uGalaxyFactor)) * leftMask * uOpacity;
+  float twinkle = mix(1.0, 0.86 + 0.14 * sin(uTime * (1.2 + vSeed * 2.2) + vSeed * 52.0), uGalaxyFactor);
+  // Particles float cleanly across the entire screen with only a gentle contrast softening over hero text
+  float leftMask = mix(1.0, mix(0.68, 1.0, smoothstep(-0.78, 0.12, vNdcX)), uLeftFade);
+  float alpha = min(1.0, disc * dofAlpha * focusPop * depthAlpha * tierBoost * twinkle * mix(1.0, 1.32, uGalaxyFactor)) * vNearFade * leftMask * uOpacity;
   float accentMix = mix(step(0.92, vSeed) * 0.55, step(0.80, vSeed) * 0.52, uGalaxyFactor);
   vec3 col = mix(uColor, uAccent, accentMix);
   fragColor = vec4(col, alpha);
@@ -1326,7 +1458,9 @@ uniform vec2 uMouseScale;
 uniform vec2 uRot;
 uniform vec2 uResolution;
 uniform float uOffsetX;
+uniform float uOffsetY;
 uniform float uScale;
+uniform float uGalaxyFactor;
 
 out float vDepth;
 
@@ -1347,9 +1481,11 @@ void main() {
   pos = rotX(rx) * rotY(ry) * pos;
   pos *= uScale;
   pos.x += uOffsetX;
+  pos.y += uOffsetY;
 
-  float zCam = 4.65;
-  float persp = 2.48 / max(0.65, zCam - pos.z);
+  float zCam = mix(4.65, 4.25, uGalaxyFactor);
+  float focalLen = mix(2.48, 1.82, uGalaxyFactor);
+  float persp = focalLen / max(0.35, zCam - pos.z);
   float aspect = uResolution.x / max(uResolution.y, 1.0);
   vec2 ndc = vec2((pos.x * persp) / aspect, pos.y * persp);
   gl_Position = vec4(ndc, clamp(-pos.z * 0.1, -0.95, 0.95), 1.0);
@@ -1441,6 +1577,7 @@ export class MorphSceneEngine {
 
   // WebGL2 state
   private gl: WebGL2RenderingContext | null = null
+  private maxPointSize = 64
   private pointProg: WebGLProgram | null = null
   private lineProg: WebGLProgram | null = null
   private pointVao: WebGLVertexArrayObject | null = null
@@ -1459,7 +1596,7 @@ export class MorphSceneEngine {
 
   constructor(options: MorphEngineOptions) {
     this.canvas = options.canvas
-    this.count = options.particleCount ?? 3000
+    this.count = options.particleCount ?? 3600
     this.linePairs = options.linePairs ?? 260
 
     this.data = buildSceneData(this.count)
@@ -1560,12 +1697,16 @@ export class MorphSceneEngine {
           gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0)
           gl.bindVertexArray(null)
 
-          for (const name of ['uMorph', 'uMouse', 'uMouseScale', 'uRot', 'uResolution', 'uOffsetX', 'uScale', 'uColor', 'uOpacity']) {
+          for (const name of ['uMorph', 'uMouse', 'uMouseScale', 'uRot', 'uResolution', 'uOffsetX', 'uOffsetY', 'uScale', 'uGalaxyFactor', 'uColor', 'uOpacity']) {
             this.uLine[name] = gl.getUniformLocation(lineProg, name)
           }
-          for (const name of ['uMorph', 'uTime', 'uMouse', 'uMouseScale', 'uRot', 'uResolution', 'uOffsetX', 'uScale', 'uPixelRatio', 'uGalaxyFactor', 'uLeftFade', 'uColor', 'uAccent', 'uOpacity']) {
+          for (const name of ['uMorph', 'uTime', 'uMouse', 'uMouseScale', 'uRot', 'uResolution', 'uOffsetX', 'uOffsetY', 'uScale', 'uPixelRatio', 'uGalaxyFactor', 'uMaxPointSize', 'uLeftFade', 'uColor', 'uAccent', 'uOpacity']) {
             this.uPoint[name] = gl.getUniformLocation(pointProg, name)
           }
+
+          const ptRange = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE) as Float32Array | null
+          const hwMax = ptRange && ptRange.length >= 2 ? ptRange[1] : 64
+          this.maxPointSize = Math.min(96, Math.max(32, hwMax))
 
           gl.enable(gl.BLEND)
           gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
@@ -1658,16 +1799,21 @@ export class MorphSceneEngine {
     mouseScaleX: number,
     mouseScaleY: number,
     offsetX: number,
-    scale: number
+    offsetY: number,
+    scale: number,
+    dt: number
   ) {
     const dispPos = this.dispPos
     const dispVel = this.dispVel
+    const dt60 = Math.min(2.0, dt * 60)
 
     if (galaxyWeight <= 0.001) {
       // Quietly damp out residual offsets once scrolled past Hero
+      const fadePos = Math.exp(-dt * 4.5)
+      const fadeVel = Math.exp(-dt * 6.0)
       for (let i = 0; i < dispPos.length; i++) {
-        dispPos[i] *= 0.82
-        dispVel[i] *= 0.72
+        dispPos[i] *= fadePos
+        dispVel[i] *= fadeVel
       }
       return
     }
@@ -1685,16 +1831,23 @@ export class MorphSceneEngine {
 
     const mX = this.mouseNdcX
     const mY = this.mouseNdcY
-    const vX = this.mouseVelX
-    const vY = this.mouseVelY
-    const speed = Math.hypot(vX, vY)
-    const activity = this.pointerActivity
-    const applyForce = this.pointerActive && (activity > 0.002 || speed > 0.0005)
+    const speed = Math.hypot(this.mouseVelX, this.mouseVelY)
+    const applyForce = this.pointerActive && speed > 0.0004
 
-    const radius = 0.62
-    const radiusSq = radius * radius
+    const zCam = 4.65 + (4.25 - 4.65) * galaxyWeight
+    const focalLen = 2.48 + (1.82 - 2.48) * galaxyWeight
+
+    // Subtle, delicate depth-respecting ripple (never carves an empty hole or hard rim)
+    const maxRadius = 0.44
+    const maxRadiusSq = maxRadius * maxRadius
     const invScale = 1 / Math.max(0.25, scale)
+    // Smooth viscous coasting for outward push impulse (zero rubber-band bounce)
+    const velDamp = Math.pow(0.89, dt60)
+    const maxDisp = 0.34
+    const maxDispSq = maxDisp * maxDisp
     const pts = this.ptsA
+    const r0 = this.data.r0
+    const r1 = this.data.r1
 
     for (let i = 0; i < this.count; i++) {
       const o = i * 3
@@ -1703,16 +1856,17 @@ export class MorphSceneEngine {
       const bz = pts[o + 2] + dispPos[o + 2]
 
       if (applyForce) {
-        // Match exact vertex shader rotation & projection
+        // Match exact vertex shader rotation & wide-FOV projection
         const x1 = bx * cy + bz * sy
         const z1 = -bx * sy + bz * cy
         const y2 = by * cx - z1 * sx
         const z2 = by * sx + z1 * cx
 
         const wx = x1 * scale + offsetX
-        const wy = y2 * scale
+        const wy = y2 * scale + offsetY
         const wz = z2 * scale
-        const persp = 2.48 / Math.max(0.65, 4.65 - wz)
+        const camDist = Math.max(0.35, zCam - wz)
+        const persp = focalLen / camDist
         const ndcX = (wx * persp) / aspect
         const ndcY = wy * persp
 
@@ -1720,41 +1874,65 @@ export class MorphSceneEngine {
         const dy = ndcY - mY
         const distSq = dx * dx + dy * dy
 
-        if (distSq < radiusSq && distSq > 1e-6) {
-          const dist = Math.sqrt(distSq)
-          const falloff = 1 - dist / radius
-          const f2 = falloff * falloff
-          const nx = dx / dist
-          const ny = dy / dist
-          // Motion-driven tangential swirl, radial parting & directional drag (fades out cleanly when mouse halts)
-          const radial = (0.011 * activity + speed * 0.14) * f2
-          const swirl = (0.009 * activity + speed * 0.12) * f2
-          const wake = 0.085 * f2
+        if (distSq < maxRadiusSq && distSq > 1e-6) {
+          // Depth-respecting gentle breeze: close foreground dust shifts slightly more,
+          // mid-ground spiral stars ruffle subtly, distant background stars stay nearly still.
+          const depthNorm = clamp01((wz + 2.8) / 5.4)
+          const localRadius = 0.16 + 0.28 * depthNorm
+          if (distSq < localRadius * localRadius) {
+            const dist = Math.sqrt(distSq)
+            const falloff = 1 - dist / localRadius
+            const f2 = falloff * falloff
+            const nx = dx / dist
+            const ny = dy / dist
 
-          const impScreenX = (nx * radial - ny * swirl + vX * wake) * invScale
-          const impScreenY = (ny * radial + nx * swirl + vY * wake) * invScale
-          const impScreenZ = (0.45 - dist / radius) * (0.010 * activity + speed * 0.09) * f2 * invScale
+            const depthStrength = 0.12 + 0.88 * Math.pow(depthNorm, 1.45)
+            // Organic per-star sensitivity variation breaks up any artificial circular rim
+            const organicVar = 0.55 + r1[i] * 0.90
+            const invPerspSoft = invScale / (0.55 + 0.45 * persp)
+            const radialPush = speed * 0.052 * f2 * depthStrength * organicVar * invPerspSoft * dt60
 
-          // Inverse rotation (rotY(-ry) * rotX(-rx)) back into local galaxy space
-          const iy1 = impScreenY * cx + impScreenZ * sx
-          const iz1 = -impScreenY * sx + impScreenZ * cx
-          const lx = impScreenX * cy - iz1 * sy
-          const lz = impScreenX * sy + iz1 * cy
+            const impScreenX = nx * radialPush
+            const impScreenY = ny * radialPush
+            // Gentle away-from-camera (-Z) nudge for 3D volumetric feel
+            const impScreenZ = -0.28 * radialPush
 
-          dispVel[o] += lx
-          dispVel[o + 1] += iy1
-          dispVel[o + 2] += lz
+            // Inverse rotation (rotY(-ry) * rotX(-rx)) back into local galaxy space
+            const iy1 = impScreenY * cx + impScreenZ * sx
+            const iz1 = -impScreenY * sx + impScreenZ * cx
+            const lx = impScreenX * cy - iz1 * sy
+            const lz = impScreenX * sy + iz1 * cy
+
+            dispVel[o] += lx
+            dispVel[o + 1] += iy1
+            dispVel[o + 2] += lz
+          }
         }
       }
 
-      // Smooth spring restoration back to galactic orbit
-      dispVel[o] = (dispVel[o] - dispPos[o] * 0.022) * 0.89
-      dispVel[o + 1] = (dispVel[o + 1] - dispPos[o + 1] * 0.022) * 0.89
-      dispVel[o + 2] = (dispVel[o + 2] - dispPos[o + 2] * 0.022) * 0.89
+      // 1) Outward impulse coasts smoothly to rest (leaving a gentle lingering ruffle)
+      dispVel[o] *= velDamp
+      dispVel[o + 1] *= velDamp
+      dispVel[o + 2] *= velDamp
 
-      dispPos[o] += dispVel[o]
-      dispPos[o + 1] += dispVel[o + 1]
-      dispPos[o + 2] += dispVel[o + 2]
+      dispPos[o] += dispVel[o] * dt60
+      dispPos[o + 1] += dispVel[o + 1] * dt60
+      dispPos[o + 2] += dispVel[o + 2] * dt60
+
+      // 2) Gradual, varied zero-G drift back over ~3-4.5s so movement leaves subtle organic impact
+      const driftBack = Math.exp(-(0.36 + r0[i] * 0.26) * dt)
+      dispPos[o] *= driftBack
+      dispPos[o + 1] *= driftBack
+      dispPos[o + 2] *= driftBack
+
+      // Clamp displacement gently so repeated dragging never carves an empty hole
+      const dLenSq = dispPos[o] * dispPos[o] + dispPos[o + 1] * dispPos[o + 1] + dispPos[o + 2] * dispPos[o + 2]
+      if (dLenSq > maxDispSq) {
+        const s = maxDisp / Math.sqrt(dLenSq)
+        dispPos[o] *= s
+        dispPos[o + 1] *= s
+        dispPos[o + 2] *= s
+      }
 
       pts[o] += dispPos[o] * galaxyWeight
       pts[o + 1] += dispPos[o + 1] * galaxyWeight
@@ -1773,9 +1951,10 @@ export class MorphSceneEngine {
     if (Math.abs(this.targetProgress - this.currentProgress) < 0.0008) {
       this.currentProgress = this.targetProgress
     }
-    this.mouseX += (this.targetMouseX - this.mouseX) * 0.06
-    this.mouseY += (this.targetMouseY - this.mouseY) * 0.06
-    const velDecay = Math.pow(0.86, dt * 60)
+    const mouseSmooth = 1 - Math.exp(-dt * 8.5)
+    this.mouseX += (this.targetMouseX - this.mouseX) * mouseSmooth
+    this.mouseY += (this.targetMouseY - this.mouseY) * mouseSmooth
+    const velDecay = Math.pow(0.84, dt * 60)
     this.mouseVelX *= velDecay
     this.mouseVelY *= velDecay
     if (Math.abs(this.mouseVelX) < 1e-5) this.mouseVelX = 0
@@ -1819,14 +1998,17 @@ export class MorphSceneEngine {
     const lineFadeT = clamp01((clamped - 0.16) / 0.56)
     const lineOpacity = this.opacity * (lineFadeT * lineFadeT * (3 - 2 * lineFadeT))
 
-    // Subtle horizontal framing: expansive RHS galaxy in Scene 0, poised right ring in Finale
+    // Panoramic galaxy anchored toward the bottom-right in Scene 0 for visual balance
+    // against left-aligned Hero typography & top-right nav, transitioning cleanly into Scenes 1-7
     const isNarrow = window.innerWidth < 860
     let offsetX = isNarrow ? 0 : 1.06
+    let offsetY = 0
     let scale = isNarrow ? 0.78 : 0.94
     if (clamped < 1.0) {
       const k = 1 - clamped * clamped * (3 - 2 * clamped)
-      offsetX = isNarrow ? 0 : 1.06 + k * 0.14
-      scale = (isNarrow ? 0.78 : 0.94) + k * (isNarrow ? 0.08 : 0.08)
+      offsetX = isNarrow ? 0 : 1.06 + k * 0.16
+      offsetY = -k * (isNarrow ? 0.14 : 0.24)
+      scale = (isNarrow ? 0.78 : 0.94) + k * (isNarrow ? 0.14 : 0.14)
     } else if (clamped > 5.5 && clamped < 6.5) {
       const k = 1 - Math.abs(clamped - 6.0) * 2
       offsetX = isNarrow ? 0 : 1.06 * (1 - k * 0.28)
@@ -1838,13 +2020,13 @@ export class MorphSceneEngine {
       scale = (isNarrow ? 0.78 : 0.92) - sk * 0.08
     }
 
-    // Softer camera tilt in Scene 0 so direct per-particle mouse interaction takes center stage
-    const mouseScaleX = 0.34 - galaxyFactor * 0.18
-    const mouseScaleY = 0.24 - galaxyFactor * 0.12
+    // Gentle camera parallax in Scene 0 so direct radial push-away interaction & deep FOV shine
+    const mouseScaleX = 0.34 - galaxyFactor * 0.20
+    const mouseScaleY = 0.24 - galaxyFactor * 0.14
     const leftFade = isNarrow ? 0 : galaxyFactor
 
-    // Apply live interactive mouse wake/swirl to Scene 0 galaxy particles
-    this.applyGalaxyMouseField(galaxyFactor, rotY, rotX, mouseScaleX, mouseScaleY, offsetX, scale)
+    // Apply live interactive radial push-away field to Scene 0 galaxy & dust particles
+    this.applyGalaxyMouseField(galaxyFactor, rotY, rotX, mouseScaleX, mouseScaleY, offsetX, offsetY, scale, dt)
 
     // Monochrome ink adapts smoothly to dark mode AND "Who I am" inversion
     const effectiveLightInk = this.darkMode ? 1 - this.currentInvert : this.currentInvert
@@ -1872,7 +2054,7 @@ export class MorphSceneEngine {
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
 
-      // Structural wireframe lines (cleanly hidden on the infinite galaxy Scene 0)
+      // Structural wireframe lines (cleanly hidden on the panoramic galaxy Scene 0)
       if (lineOpacity > 0.002) {
         gl.useProgram(this.lineProg)
         gl.bindVertexArray(this.lineVao)
@@ -1882,13 +2064,15 @@ export class MorphSceneEngine {
         gl.uniform2f(this.uLine.uRot, rotY, rotX)
         gl.uniform2f(this.uLine.uResolution, this.canvas.width, this.canvas.height)
         gl.uniform1f(this.uLine.uOffsetX, offsetX)
+        gl.uniform1f(this.uLine.uOffsetY, offsetY)
         gl.uniform1f(this.uLine.uScale, scale)
+        gl.uniform1f(this.uLine.uGalaxyFactor, galaxyFactor)
         gl.uniform3f(this.uLine.uColor, ink, ink, ink)
         gl.uniform1f(this.uLine.uOpacity, lineOpacity)
         gl.drawArrays(gl.LINES, 0, this.linePairs * 2)
       }
 
-      // Crisp depth-attenuated particle sculpture / infinite galaxy
+      // Crisp depth-attenuated particle sculpture / DOF panoramic galaxy
       gl.useProgram(this.pointProg)
       gl.bindVertexArray(this.pointVao)
       gl.uniform1f(this.uPoint.uMorph, effectiveMorph)
@@ -1898,9 +2082,11 @@ export class MorphSceneEngine {
       gl.uniform2f(this.uPoint.uRot, rotY, rotX)
       gl.uniform2f(this.uPoint.uResolution, this.canvas.width, this.canvas.height)
       gl.uniform1f(this.uPoint.uOffsetX, offsetX)
+      gl.uniform1f(this.uPoint.uOffsetY, offsetY)
       gl.uniform1f(this.uPoint.uScale, scale)
       gl.uniform1f(this.uPoint.uPixelRatio, dpr)
       gl.uniform1f(this.uPoint.uGalaxyFactor, galaxyFactor)
+      gl.uniform1f(this.uPoint.uMaxPointSize, this.maxPointSize)
       gl.uniform1f(this.uPoint.uLeftFade, leftFade)
       gl.uniform3f(this.uPoint.uColor, ink, ink, ink)
       gl.uniform3f(this.uPoint.uAccent, accentR, accentG, accentB)
@@ -1908,7 +2094,7 @@ export class MorphSceneEngine {
       gl.drawArrays(gl.POINTS, 0, this.count)
       gl.bindVertexArray(null)
     } else if (this.ctx2d) {
-      this.renderCanvas2D(effectiveMorph, rotY, rotX, mouseScaleX, mouseScaleY, offsetX, scale, ink, lineOpacity, leftFade)
+      this.renderCanvas2D(effectiveMorph, rotY, rotX, mouseScaleX, mouseScaleY, offsetX, offsetY, scale, ink, lineOpacity, leftFade, galaxyFactor)
     }
   }
 
@@ -1925,10 +2111,12 @@ export class MorphSceneEngine {
     mouseScaleX: number,
     mouseScaleY: number,
     offsetX: number,
+    offsetY: number,
     scale: number,
     ink: number,
     lineOpacity: number,
-    leftFade: number
+    leftFade: number,
+    galaxyFactor: number
   ) {
     const ctx = this.ctx2d!
     const w = this.canvas.width
@@ -1946,6 +2134,8 @@ export class MorphSceneEngine {
     const halfW = w * 0.5
     const halfH = h * 0.5
     const unit = Math.min(w, h) * 0.45
+    const zCam = 4.65 + (4.25 - 4.65) * galaxyFactor
+    const focalLen = 2.48 + (1.82 - 2.48) * galaxyFactor
 
     const project = (x: number, y: number, z: number) => {
       const x1 = x * cy + z * sy
@@ -1953,10 +2143,11 @@ export class MorphSceneEngine {
       const y2 = y * cx - z1 * sx
       const z2 = y * sx + z1 * cx
       const px = x1 * scale + offsetX
-      const py = y2 * scale
+      const py = y2 * scale + offsetY
       const pz = z2 * scale
-      const p = 2.48 / Math.max(0.65, 4.65 - pz)
-      return [halfW + px * p * unit, halfH - py * p * unit, pz]
+      const camDist = Math.max(0.35, zCam - pz)
+      const p = focalLen / camDist
+      return [halfW + px * p * unit, halfH - py * p * unit, pz, camDist]
     }
 
     if (lineOpacity > 0.002) {
@@ -1988,19 +2179,20 @@ export class MorphSceneEngine {
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     for (let i = 0; i < this.count; i += 2) {
       const o = i * 3
-      const [sx2, sy2, pz] = project(
+      const [sx2, sy2, pz, camDist] = project(
         s > 0 ? pA[o] + (pB[o] - pA[o]) * s : pA[o],
         s > 0 ? pA[o + 1] + (pB[o + 1] - pA[o + 1]) * s : pA[o + 1],
         s > 0 ? pA[o + 2] + (pB[o + 2] - pA[o + 2]) * s : pA[o + 2]
       )
       const ndcX = (sx2 / Math.max(1, w)) * 2 - 1
-      const lf = clamp01((ndcX + 0.46) / 0.44)
-      const leftMask = 1 - leftFade + leftFade * (lf * lf * (3 - 2 * lf))
-      if (leftMask <= 0.01) continue
-      const depth = Math.max(0, Math.min(1, (pz + 2.2) / 4.4))
-      const alpha = Math.min(1, (0.58 + depth * 0.42)) * leftMask * this.opacity
+      const lf = clamp01((ndcX + 0.78) / 0.90)
+      const leftMask = 1 - leftFade + leftFade * (0.68 + 0.32 * (lf * lf * (3 - 2 * lf)))
+      const coc = Math.max(0, Math.abs(camDist - 4.05) / camDist - 0.11)
+      const blur = Math.min(1, coc * 0.92) * galaxyFactor
+      const depth = Math.max(0, Math.min(1, (pz + 3.0) / 6.0))
+      const alpha = Math.min(1, (0.48 + depth * 0.52) * (1 - blur * 0.68)) * leftMask * this.opacity
       ctx.fillStyle = `rgba(${rgb},${rgb},${rgb},${alpha.toFixed(3)})`
-      const rad = Math.max(1.1, this.sizes[i] * (0.34 + depth * 0.36) * dpr)
+      const rad = Math.max(1.1, (this.sizes[i] * (0.34 + depth * 0.36) + blur * 5.5) * dpr)
       ctx.beginPath()
       ctx.arc(sx2, sy2, rad, 0, TAU)
       ctx.fill()

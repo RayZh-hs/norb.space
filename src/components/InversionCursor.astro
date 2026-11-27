@@ -109,14 +109,11 @@
       window.matchMedia('(pointer: coarse)').matches ||
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    let targetX = -100
-    let targetY = -100
     let currentX = -100
     let currentY = -100
     let visible = false
     let enabled = false
     let lockedForFallback = false
-    let rafId = 0
 
     const interactiveSelector = 'a, button, [role="button"], [data-cursor="link"], input, summary'
     const getCursor = () => document.getElementById('inversion-cursor')
@@ -208,33 +205,21 @@
       if (!enabled) {
         cursor.classList.remove('is-hovering', 'is-pressed')
       } else if (visible) {
+        cursor.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) translate(-50%, -50%)`
         cursor.classList.add('is-visible')
       }
-    }
-
-    const tick = () => {
-      const cursor = getCursor()
-      if (cursor && enabled && !lockedForFallback) {
-        currentX += (targetX - currentX) * 0.22
-        currentY += (targetY - currentY) * 0.22
-        cursor.style.transform = `translate3d(${currentX.toFixed(2)}px, ${currentY.toFixed(2)}px, 0) translate(-50%, -50%)`
-      }
-      rafId = requestAnimationFrame(tick)
     }
 
     window.addEventListener(
       'pointermove',
       (e) => {
-        targetX = e.clientX
-        targetY = e.clientY
+        currentX = e.clientX
+        currentY = e.clientY
+        visible = true
         const cursor = getCursor()
-        if (!visible) {
-          currentX = targetX
-          currentY = targetY
-          visible = true
-          if (!rafId) rafId = requestAnimationFrame(tick)
-        }
         if (!cursor || !enabled || lockedForFallback) return
+        // Direct 1:1 pointer tracking (no heavy lerp inertia) so cursor speed matches OS pointer exactly
+        cursor.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) translate(-50%, -50%)`
         cursor.classList.add('is-visible')
         const el = document.elementFromPoint(e.clientX, e.clientY)
         const isInteractive = !!el?.closest(interactiveSelector)
