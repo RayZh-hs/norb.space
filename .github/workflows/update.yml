@@ -10,19 +10,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  update-webhook:
-    name: Trigger Update Webhook
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - name: Trigger update webhook
-        run: |
-          curl -fsS --max-time 30 -X POST \
-            https://api.norb.space/update/norb.space \
-            -H "Authorization: Bearer ${{ secrets.API_UPDATE_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{}'
-
   deploy-servers:
     name: Build, Publish Asset CDN & Deploy to Edge Servers
     runs-on: ubuntu-latest
