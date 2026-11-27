@@ -1111,6 +1111,7 @@ const meta = {
 
     // Wheel transitions cleanly between full-viewport project scenes (both mouse wheel & trackpad)
     const onWheel = (e: WheelEvent) => {
+      if (window.__norbSearch?.isOpen()) return
       if (overviewOpen || window.innerWidth <= 1024) return
       const activeScene = filtered[currentIdx] ? sceneEls.get(filtered[currentIdx].slug) : null
       if (activeScene && activeScene.scrollHeight > activeScene.clientHeight + 2) {
@@ -1141,6 +1142,7 @@ const meta = {
     }
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (window.__norbSearch?.isOpen()) return
       if (e.key === 'Escape' && overviewOpen) {
         setOverview(false)
         return
@@ -1159,12 +1161,12 @@ const meta = {
     let touchStartX = 0
     let touchStartY = 0
     const onTouchStart = (e: TouchEvent) => {
-      if (overviewOpen || e.touches.length !== 1) return
+      if (window.__norbSearch?.isOpen() || overviewOpen || e.touches.length !== 1) return
       touchStartX = e.touches[0].clientX
       touchStartY = e.touches[0].clientY
     }
     const onTouchEnd = (e: TouchEvent) => {
-      if (overviewOpen || e.changedTouches.length !== 1) return
+      if (window.__norbSearch?.isOpen() || overviewOpen || e.changedTouches.length !== 1) return
       const dx = e.changedTouches[0].clientX - touchStartX
       const dy = e.changedTouches[0].clientY - touchStartY
       if (Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.4) {

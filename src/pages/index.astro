@@ -449,10 +449,10 @@ const chapterNav = [
     100% { transform: translateX(100%); }
   }
 
-  /* Autobiography Sticky Theater (6 equal 100vh stages -> 700vh track) */
+  /* Autobiography Sticky Theater (5 x 100vh chapters + compact 50vh "Who I am" -> 650vh track) */
   .bio-track {
     position: relative;
-    height: 700vh;
+    height: 650vh;
   }
   .bio-sticky {
     position: sticky;
@@ -1261,6 +1261,13 @@ const chapterNav = [
     let settleTimer: number | null = null
     let isPointerDown = false
     let lastSceneProgress = 0
+    let lastScrollY = window.scrollY
+    let lastScrollDir = 0
+
+    // Chapters 0..4 each span 1.0 unit (100vh); Chapter 5 ("Who I am") uses a compact 0.50 unit (50vh)
+    // sticky plateau so scrolling from "Who I am" into Contacts feels crisp and one-shot with a mouse wheel.
+    const BIO_TOTAL_UNITS = 5.5
+    const WHO_I_AM_TARGET_UNIT = 5.32
 
     function setBioChapter(idx: number) {
       if (idx === activeBioIdx) return
@@ -1290,9 +1297,13 @@ const chapterNav = [
       const bioTop = bioTrack!.offsetTop
       const bioScrollable = Math.max(1, bioTrack!.offsetHeight - vh)
       if (stageIdx <= 0) return 0
-      if (stageIdx >= 1 && stageIdx <= 6) {
-        // Center of each of the 6 equal bio chapter plateaus
-        return bioTop + ((stageIdx - 0.5) / 6) * bioScrollable
+      if (stageIdx >= 1 && stageIdx <= 5) {
+        // Center of each of the first 5 bio chapter plateaus
+        return bioTop + ((stageIdx - 0.5) / BIO_TOTAL_UNITS) * bioScrollable
+      }
+      if (stageIdx === 6) {
+        // Resting plateau for "Who I am", sitting close enough to unstick for a single wheel scroll into Contacts
+        return bioTop + (WHO_I_AM_TARGET_UNIT / BIO_TOTAL_UNITS) * bioScrollable
       }
       return finaleSection!.offsetTop
     }
@@ -1304,11 +1315,21 @@ const chapterNav = [
       }
     }
 
+    function resolveSettleTarget(progress: number): number {
+      // Direction-aware settle between "Who I am" (6) and Contacts (7) so a single mouse-wheel flick
+      // commits cleanly without bouncing back up to "Who I am".
+      if (progress > 6 && progress < 7) {
+        if (lastScrollDir > 0 && progress >= 6.08) return 7
+        if (lastScrollDir < 0 && progress <= 6.92) return 6
+      }
+      return Math.round(progress)
+    }
+
     function scheduleCorridorSettle() {
       clearSettleTimer()
       if (prefersReduced || isPointerDown) return
       // Only settle if the user actually stopped inside a narrow transition corridor
-      // (non-integer sceneProgress) — NEVER tug when resting inside a chapter's 68% dwell plateau!
+      // (non-integer sceneProgress) — NEVER tug when resting inside a chapter's dwell plateau!
       const nearest = Math.round(lastSceneProgress)
       const distFromStage = Math.abs(lastSceneProgress - nearest)
       if (distFromStage < 0.04) return
@@ -1317,22 +1338,22 @@ const chapterNav = [
         if (isPointerDown) return
         const curNearest = Math.round(lastSceneProgress)
         if (Math.abs(lastSceneProgress - curNearest) >= 0.04) {
-          smoothScrollTo(getStageTargetScrollY(curNearest))
+          smoothScrollTo(getStageTargetScrollY(resolveSettleTarget(lastSceneProgress)))
         }
       }, 210)
     }
 
     /**
      * Plateau staging mapping for the 6 bio chapters:
-     * Each chapter i in 0..5 owns [i, i + 1] of `stagePos = raw * 6`.
-     * - For the central 68% of each chapter (local in [0.16, 0.84]),
-     *   sceneProgress holds steady at exact integer (i + 1), so the RHS 3D sculpture
-     *   is 100% formed, crisp, and playing its theme animation!
+     * Chapters 0..4 each own [i, i + 1] of `stagePos = raw * BIO_TOTAL_UNITS`,
+     * and Chapter 5 ("Who I am") owns [5, BIO_TOTAL_UNITS].
+     * - For the central plateau of each chapter, sceneProgress holds steady at exact integer (i + 1),
+     *   so the RHS 3D sculpture is 100% formed, crisp, and playing its theme animation.
      * - Only across the narrow ±0.16 corridor around each boundary (i + 1) does
      *   the sculpture smoothly morph (i + 1) -> (i + 2).
      */
     function computeStagedBioProgress(raw: number): { sceneProgress: number; chapterIdx: number } {
-      const stagePos = clamp01(raw) * 6 // 0 .. 6 across 6 chapters
+      const stagePos = clamp01(raw) * BIO_TOTAL_UNITS
       const chapterIdx = Math.max(0, Math.min(5, Math.floor(Math.min(5.9999, stagePos))))
       const corridorHalf = 0.16
 
@@ -1349,6 +1370,10 @@ const chapterNav = [
     function updateScroll() {
       const vh = window.innerHeight || 800
       const scrollY = window.scrollY
+      if (Math.abs(scrollY - lastScrollY) > 0.5) {
+        lastScrollDir = scrollY > lastScrollY ? 1 : -1
+        lastScrollY = scrollY
+      }
       const bioTop = bioTrack!.offsetTop
       const bioScrollable = Math.max(1, bioTrack!.offsetHeight - vh)
       const finaleTop = finaleSection!.offsetTop
@@ -1376,11 +1401,11 @@ const chapterNav = [
         isInverted = staged.chapterIdx === 5
       } else {
         const finaleDist = Math.max(1, finaleTop - (bioTop + bioScrollable))
-        const frac = clamp01((scrollY - (bioTop + bioScrollable)) / Math.max(vh * 0.72, finaleDist))
-        sceneProgress = 6 + smoothstep(0.08, 0.82, frac)
+        const frac = clamp01((scrollY - (bioTop + bioScrollable)) / finaleDist)
+        sceneProgress = 6 + smoothstep(0.04, 0.78, frac)
         setBioChapter(5)
-        setActiveRail(frac > 0.42 ? 7 : 6)
-        isInverted = frac < 0.36
+        setActiveRail(frac > 0.34 ? 7 : 6)
+        isInverted = frac < 0.28
       }
 
       lastSceneProgress = sceneProgress
@@ -1405,7 +1430,7 @@ const chapterNav = [
     let starDownTime = 0
     let starDownEligible = false
     const nonStarSelector =
-      'a, button, input, textarea, select, summary, [role="button"], #site-header, #chapter-rail'
+      'a, button, input, textarea, select, summary, [role="button"], #site-header, #chapter-rail, #norb-search-modal'
 
     const onPointerDown = (e: PointerEvent) => {
       isPointerDown = true

@@ -1,0 +1,1215 @@
+---
+---
+
+<div
+  id='norb-search-modal'
+  class='search-modal'
+  role='dialog'
+  aria-modal='true'
+  aria-labelledby='search-modal-label'
+  aria-hidden='true'
+  data-mode='site'
+  data-smooth-scroll-ignore
+>
+  <div class='search-backdrop' data-search-close></div>
+
+  <div class='search-dialog-shell'>
+    <div class='search-panel' data-smooth-scroll-ignore>
+      {/* Top Input Row */}
+      <div class='search-input-row'>
+        <span id='search-mode-badge' class='search-mode-badge' aria-live='polite'>
+          <svg
+            id='search-badge-icon-site'
+            class='size-3.5 shrink-0'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            stroke-width='1.85'
+            stroke-linecap='round'
+            stroke-linejoin='round'
+            aria-hidden='true'
+          >
+            <circle cx='12' cy='12' r='9'></circle>
+            <path d='M3.6 9h16.8M3.6 15h16.8'></path>
+            <path d='M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18'></path>
+          </svg>
+          <svg
+            id='search-badge-icon-blog'
+            class='hidden size-3.5 shrink-0'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            stroke-width='1.85'
+            stroke-linecap='round'
+            stroke-linejoin='round'
+            aria-hidden='true'
+          >
+            <path d='M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20'></path>
+            <path d='M8 7h8M8 11h6'></path>
+          </svg>
+          <span id='search-modal-label'>Site</span>
+        </span>
+
+        <input
+          id='norb-search-input'
+          type='text'
+          inputmode='search'
+          enterkeyhint='search'
+          autocomplete='off'
+          spellcheck='false'
+          placeholder='Search blogs, projects, creative works, pages…'
+          aria-label='Search query'
+          class='search-input'
+        />
+
+        <button
+          id='norb-search-clear'
+          type='button'
+          class='search-clear-btn hidden'
+          aria-label='Clear search'
+          data-cursor='link'
+        >
+          Clear
+        </button>
+
+        <button
+          type='button'
+          class='search-esc-btn'
+          aria-label='Close search'
+          data-search-close
+          data-cursor='link'
+        >
+          ESC
+        </button>
+      </div>
+
+      {/* Mode-Specific Sub-Bar: Scope Tabs for Site Search vs Blog Context & Tags for Blog Search */}
+      <div id='search-site-bar' class='search-sub-bar' role='tablist' aria-label='Filter search scope'>
+        <div class='flex flex-wrap items-center gap-1.5'>
+          <button type='button' class='search-scope-tab is-active' data-scope='all' role='tab' aria-selected='true' data-cursor='link'>
+            All <span class='search-tab-count' data-count='all'></span>
+          </button>
+          <button type='button' class='search-scope-tab' data-scope='blog' role='tab' aria-selected='false' data-cursor='link'>
+            Blogs <span class='search-tab-count' data-count='blog'></span>
+          </button>
+          <button type='button' class='search-scope-tab' data-scope='project' role='tab' aria-selected='false' data-cursor='link'>
+            Projects <span class='search-tab-count' data-count='project'></span>
+          </button>
+          <button type='button' class='search-scope-tab' data-scope='creative' role='tab' aria-selected='false' data-cursor='link'>
+            Creative <span class='search-tab-count' data-count='creative'></span>
+          </button>
+          <button type='button' class='search-scope-tab' data-scope='page' role='tab' aria-selected='false' data-cursor='link'>
+            Pages <span class='search-tab-count' data-count='page'></span>
+          </button>
+        </div>
+      </div>
+
+      <div id='search-blog-bar' class='search-sub-bar hidden'>
+        <div class='flex flex-wrap items-center justify-between gap-2'>
+          <div id='search-blog-tags' class='flex flex-wrap items-center gap-1.5'>
+            <span class='text-[11px] font-medium uppercase tracking-[0.12em] opacity-45'>Blog articles</span>
+          </div>
+          <button
+            id='search-switch-to-site'
+            type='button'
+            class='search-switch-btn'
+            data-cursor='link'
+          >
+            Search entire site ↗
+          </button>
+        </div>
+      </div>
+
+      {/* Results Viewport */}
+      <div
+        id='norb-search-results'
+        class='search-results'
+        role='listbox'
+        aria-label='Search results'
+        data-smooth-scroll-ignore
+      >
+        <div class='search-status-msg'>Loading search index…</div>
+      </div>
+
+      {/* Minimalist Footer */}
+      <div class='search-footer'>
+        <div class='flex items-center gap-3'>
+          <span class='search-hint'><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+          <span class='search-hint'><kbd>↵</kbd> open</span>
+          <span class='search-hint'><kbd>esc</kbd> close</span>
+        </div>
+        <span id='search-footer-mode' class='search-footer-mode'>Site Search · ⌘K</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  .search-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: clamp(3.5rem, 9vh, 6.5rem) 1rem 1.5rem;
+    visibility: hidden;
+    pointer-events: none;
+    transition: visibility 0s linear 0.26s;
+  }
+  .search-modal.is-open {
+    visibility: visible;
+    pointer-events: auto;
+    transition: visibility 0s linear 0s;
+  }
+
+  .search-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: hsl(var(--background) / 0);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+    will-change: background-color, backdrop-filter;
+    transition:
+      background-color 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+      backdrop-filter 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+      -webkit-backdrop-filter 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .search-modal.is-open .search-backdrop {
+    background-color: hsl(var(--background) / 0.68);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  html.dark .search-backdrop {
+    background-color: hsl(0 0% 2% / 0);
+  }
+  html.dark .search-modal.is-open .search-backdrop {
+    background-color: hsl(0 0% 2% / 0.72);
+  }
+
+  .search-dialog-shell {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 40rem;
+    opacity: 0;
+    transform: translate3d(0, -10px, 0) scale(0.985);
+    transition:
+      opacity 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .search-modal.is-open .search-dialog-shell {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  .search-panel {
+    display: flex;
+    flex-direction: column;
+    max-height: min(74vh, 38rem);
+    overflow: hidden;
+    border-radius: 1.15rem;
+    border: 1px solid hsl(var(--border) / 0.9);
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    box-shadow:
+      0 24px 64px -16px rgba(0, 0, 0, 0.24),
+      0 4px 16px -4px rgba(0, 0, 0, 0.08);
+  }
+  html.dark .search-panel {
+    box-shadow:
+      0 28px 72px -12px rgba(0, 0, 0, 0.65),
+      0 0 0 1px hsl(var(--foreground) / 0.06);
+  }
+
+  .search-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.9rem 1.05rem;
+    border-bottom: 1px solid hsl(var(--border) / 0.7);
+  }
+
+  .search-mode-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.62rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--muted) / 0.7);
+    color: hsl(var(--foreground));
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .search-modal[data-mode='blog'] .search-mode-badge {
+    background: hsl(var(--foreground));
+    border-color: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+
+  .search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: hsl(var(--foreground));
+    font-size: 0.96rem;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+  }
+  .search-input::placeholder {
+    color: hsl(var(--muted-foreground) / 0.75);
+  }
+  .search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .search-clear-btn,
+  .search-esc-btn {
+    flex-shrink: 0;
+    border-radius: 0.45rem;
+    border: 1px solid hsl(var(--border) / 0.9);
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    line-height: 1;
+    padding: 0.34rem 0.48rem;
+    cursor: pointer;
+    transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+  }
+  .search-clear-btn:hover,
+  .search-esc-btn:hover {
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--foreground) / 0.4);
+    background: hsl(var(--muted) / 0.6);
+  }
+
+  .search-sub-bar {
+    padding: 0.58rem 1.05rem;
+    border-bottom: 1px solid hsl(var(--border) / 0.55);
+    background: hsl(var(--muted) / 0.28);
+  }
+
+  .search-scope-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.24rem 0.68rem;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .search-scope-tab:hover {
+    color: hsl(var(--foreground));
+    background: hsl(var(--foreground) / 0.06);
+  }
+  .search-scope-tab.is-active {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+  .search-tab-count {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    opacity: 0.68;
+  }
+  .search-tab-count:empty {
+    display: none;
+  }
+
+  .search-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.55rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border) / 0.9);
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .search-tag-chip:hover,
+  .search-tag-chip.is-active {
+    border-color: hsl(var(--foreground) / 0.55);
+    color: hsl(var(--foreground));
+    background: hsl(var(--foreground) / 0.07);
+  }
+
+  .search-switch-btn {
+    border: none;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.74rem;
+    font-weight: 500;
+    padding: 0.18rem 0.4rem;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.18s ease, background-color 0.18s ease;
+  }
+  .search-switch-btn:hover {
+    color: hsl(var(--foreground));
+    background: hsl(var(--foreground) / 0.06);
+  }
+
+  .search-results {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.55rem;
+  }
+
+  .search-group-heading {
+    padding: 0.55rem 0.65rem 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground) / 0.75);
+  }
+
+  .search-result-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+    padding: 0.72rem 0.8rem;
+    border-radius: 0.75rem;
+    color: hsl(var(--foreground));
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+  }
+  .search-result-item:hover,
+  .search-result-item.is-selected {
+    background: hsl(var(--foreground) / 0.065);
+    color: hsl(var(--foreground));
+  }
+
+  .search-result-main {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .search-result-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .search-result-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.35;
+  }
+
+  .search-result-kind {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.1rem 0.46rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border) / 0.85);
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+    flex-shrink: 0;
+  }
+
+  .search-result-dot {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
+
+  .search-result-snippet {
+    margin-top: 0.25rem;
+    font-size: 0.79rem;
+    line-height: 1.5;
+    color: hsl(var(--muted-foreground));
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .search-result-meta {
+    margin-top: 0.35rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.7rem;
+    color: hsl(var(--muted-foreground) / 0.82);
+  }
+
+  .search-result-arrow {
+    flex-shrink: 0;
+    align-self: center;
+    font-size: 0.85rem;
+    opacity: 0.25;
+    transform: translateX(0);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+  }
+  .search-result-item:hover .search-result-arrow,
+  .search-result-item.is-selected .search-result-arrow {
+    opacity: 0.9;
+    transform: translateX(2px);
+  }
+
+  .search-highlight {
+    background: hsl(var(--foreground) / 0.14);
+    color: hsl(var(--foreground));
+    border-radius: 0.2rem;
+    padding: 0 0.14rem;
+    font-weight: 600;
+  }
+
+  .search-status-msg {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    font-size: 0.86rem;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .search-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 1.05rem;
+    border-top: 1px solid hsl(var(--border) / 0.65);
+    background: hsl(var(--muted) / 0.24);
+    font-size: 0.7rem;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .search-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+  }
+  .search-hint kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.2rem;
+    padding: 0 0.3rem;
+    border-radius: 0.3rem;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--card));
+    font-family: var(--font-mono);
+    font-size: 0.63rem;
+    color: hsl(var(--foreground) / 0.8);
+  }
+
+  .search-footer-mode {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.05em;
+    opacity: 0.75;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .search-modal {
+      padding: 1rem 0.75rem;
+    }
+    .search-panel {
+      max-height: 82vh;
+    }
+    .search-footer .search-hint:first-child {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  type SearchMode = 'site' | 'blog'
+  type SiteScope = 'all' | 'blog' | 'project' | 'creative' | 'page'
+  type SearchItemKind = 'blog' | 'project' | 'creative' | 'photo' | 'page'
+
+  interface SearchIndexItem {
+    id: string
+    kind: SearchItemKind
+    title: string
+    description: string
+    url: string
+    date?: string
+    tags: string[]
+    category?: string
+    accent?: string
+    headings?: string[]
+    body: string
+  }
+
+  interface ScoredResult {
+    item: SearchIndexItem
+    score: number
+    snippet: string
+  }
+
+  interface NorbSearchAPI {
+    open: (mode?: SearchMode, initialQuery?: string) => void
+    close: () => void
+    isOpen: () => boolean
+  }
+
+  declare global {
+    interface Window {
+      __norbSearch?: NorbSearchAPI
+      __norbSearchBound?: boolean
+    }
+  }
+
+  let cachedItems: SearchIndexItem[] | null = null
+  let fetchPromise: Promise<SearchIndexItem[]> | null = null
+
+  let currentMode: SearchMode = 'site'
+  let currentScope: SiteScope = 'all'
+  let selectedIdx = 0
+  let isModalOpen = false
+  let prevFocusedEl: HTMLElement | null = null
+
+  const KIND_LABELS: Record<SearchItemKind, string> = {
+    blog: 'Blog',
+    project: 'Project',
+    creative: 'Creative',
+    photo: 'Photo',
+    page: 'Page'
+  }
+
+  async function loadSearchIndex(): Promise<SearchIndexItem[]> {
+    if (cachedItems) return cachedItems
+    if (!fetchPromise) {
+      fetchPromise = fetch('/api/search.json')
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return res.json() as Promise<{ items: SearchIndexItem[] }>
+        })
+        .then((data) => {
+          cachedItems = Array.isArray(data.items) ? data.items : []
+          return cachedItems
+        })
+        .catch(() => {
+          fetchPromise = null
+          return []
+        })
+    }
+    return fetchPromise
+  }
+
+  function escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
+
+  function escapeRegExp(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  }
+
+  function highlightText(text: string, tokens: string[]): string {
+    const safe = escapeHtml(text)
+    if (!tokens.length) return safe
+    const pattern = tokens
+      .filter((t) => t.length > 0)
+      .sort((a, b) => b.length - a.length)
+      .map(escapeRegExp)
+      .join('|')
+    if (!pattern) return safe
+    return safe.replace(new RegExp(`(${pattern})`, 'gi'), '<mark class="search-highlight">$1</mark>')
+  }
+
+  function extractSnippet(item: SearchIndexItem, tokens: string[]): string {
+    if (!tokens.length) return item.description
+    const lowerDesc = item.description.toLowerCase()
+    const descHasMatch = tokens.some((t) => lowerDesc.includes(t))
+    if (descHasMatch) return item.description
+
+    // Check headings next
+    if (item.headings?.length) {
+      const matchedHeading = item.headings.find((h) => {
+        const lh = h.toLowerCase()
+        return tokens.some((t) => lh.includes(t))
+      })
+      if (matchedHeading) {
+        return `§ ${matchedHeading} — ${item.description}`
+      }
+    }
+
+    // Extract contextual body excerpt around first token match
+    const body = item.body || ''
+    const lowerBody = body.toLowerCase()
+    let matchPos = -1
+    for (const token of tokens) {
+      const idx = lowerBody.indexOf(token)
+      if (idx !== -1 && (matchPos === -1 || idx < matchPos)) {
+        matchPos = idx
+      }
+    }
+    if (matchPos === -1) return item.description
+
+    const radius = 64
+    let start = Math.max(0, matchPos - radius)
+    let end = Math.min(body.length, matchPos + 110)
+    if (start > 0) {
+      const nextSpace = body.indexOf(' ', start)
+      if (nextSpace !== -1 && nextSpace < matchPos) start = nextSpace + 1
+    }
+    if (end < body.length) {
+      const lastSpace = body.lastIndexOf(' ', end)
+      if (lastSpace > matchPos) end = lastSpace
+    }
+    const prefix = start > 0 ? '…' : ''
+    const suffix = end < body.length ? '…' : ''
+    return `${prefix}${body.slice(start, end).trim()}${suffix}`
+  }
+
+  function matchesScope(item: SearchIndexItem, scope: SiteScope): boolean {
+    if (scope === 'all') return true
+    if (scope === 'creative') return item.kind === 'creative' || item.kind === 'photo'
+    return item.kind === scope
+  }
+
+  function scoreItem(item: SearchIndexItem, rawQuery: string, tokens: string[]): ScoredResult | null {
+    const title = item.title.toLowerCase()
+    const desc = item.description.toLowerCase()
+    const tags = item.tags.join(' ').toLowerCase()
+    const category = (item.category ?? '').toLowerCase()
+    const headings = (item.headings ?? []).join(' ').toLowerCase()
+    const body = item.body.toLowerCase()
+    const combined = `${title} ${desc} ${tags} ${category} ${headings} ${body}`
+
+    // Every token must match somewhere in the item
+    for (const token of tokens) {
+      if (!combined.includes(token)) return null
+    }
+
+    let score = 0
+    if (title === rawQuery) score += 200
+    else if (title.startsWith(rawQuery)) score += 120
+    else if (title.includes(rawQuery)) score += 80
+
+    for (const token of tokens) {
+      if (title.includes(token)) score += 45
+      if (tags.includes(token)) score += 30
+      if (category.includes(token)) score += 26
+      if (headings.includes(token)) score += 22
+      if (desc.includes(token)) score += 18
+      if (body.includes(token)) score += 8
+    }
+
+    // Gentle priority boost for primary content over generic pages when scores tie
+    if (item.kind === 'blog' || item.kind === 'project') score += 4
+
+    return {
+      item,
+      score,
+      snippet: extractSnippet(item, tokens)
+    }
+  }
+
+  function getEls() {
+    return {
+      modal: document.getElementById('norb-search-modal'),
+      input: document.getElementById('norb-search-input') as HTMLInputElement | null,
+      clearBtn: document.getElementById('norb-search-clear'),
+      results: document.getElementById('norb-search-results'),
+      label: document.getElementById('search-modal-label'),
+      iconSite: document.getElementById('search-badge-icon-site'),
+      iconBlog: document.getElementById('search-badge-icon-blog'),
+      siteBar: document.getElementById('search-site-bar'),
+      blogBar: document.getElementById('search-blog-bar'),
+      blogTags: document.getElementById('search-blog-tags'),
+      footerMode: document.getElementById('search-footer-mode')
+    }
+  }
+
+  function renderBlogTagBar(items: SearchIndexItem[], query: string) {
+    const { blogTags } = getEls()
+    if (!blogTags) return
+
+    const tagSet = new Set<string>()
+    for (const item of items) {
+      if (item.kind === 'blog') {
+        for (const tag of item.tags) tagSet.add(tag)
+      }
+    }
+    const tags = Array.from(tagSet).slice(0, 7)
+    const normalizedQuery = query.trim().toLowerCase()
+
+    if (!tags.length) {
+      blogTags.innerHTML =
+        '<span class="text-[11px] font-medium uppercase tracking-[0.12em] opacity-45">Searching blog articles</span>'
+      return
+    }
+
+    blogTags.innerHTML = tags
+      .map((tag) => {
+        const active = normalizedQuery === tag.toLowerCase()
+        return `<button type="button" class="search-tag-chip${active ? ' is-active' : ''}" data-blog-tag="${escapeHtml(tag)}" data-cursor="link">#${escapeHtml(tag)}</button>`
+      })
+      .join('')
+  }
+
+  function updateScopeCounts(items: SearchIndexItem[], rawQuery: string, tokens: string[]) {
+    const counts: Record<SiteScope, number> = {
+      all: 0,
+      blog: 0,
+      project: 0,
+      creative: 0,
+      page: 0
+    }
+
+    if (tokens.length > 0) {
+      for (const item of items) {
+        if (!scoreItem(item, rawQuery, tokens)) continue
+        counts.all++
+        if (item.kind === 'blog') counts.blog++
+        else if (item.kind === 'project') counts.project++
+        else if (item.kind === 'creative' || item.kind === 'photo') counts.creative++
+        else if (item.kind === 'page') counts.page++
+      }
+    }
+
+    document.querySelectorAll<HTMLElement>('.search-tab-count').forEach((el) => {
+      const scope = el.dataset.count as SiteScope | undefined
+      if (!scope) return
+      el.textContent = tokens.length > 0 ? String(counts[scope]) : ''
+    })
+  }
+
+  function renderResultCard(
+    item: SearchIndexItem,
+    snippet: string,
+    tokens: string[],
+    idx: number,
+    isBlogMode: boolean
+  ): string {
+    const titleHtml = highlightText(item.title, tokens)
+    const snippetHtml = highlightText(snippet, tokens)
+    const dotHtml = item.accent
+      ? `<span class="search-result-dot" style="background-color:${escapeHtml(item.accent)};" aria-hidden="true"></span>`
+      : ''
+
+    const kindBadge = !isBlogMode
+      ? `<span class="search-result-kind">${dotHtml}${KIND_LABELS[item.kind]}</span>`
+      : item.category
+        ? `<span class="search-result-kind">${dotHtml}${escapeHtml(item.category)}</span>`
+        : ''
+
+    const metaParts: string[] = []
+    if (item.date) metaParts.push(`<span>${escapeHtml(item.date)}</span>`)
+    if (!isBlogMode && item.category && item.kind !== 'page') {
+      metaParts.push(`<span>${escapeHtml(item.category)}</span>`)
+    }
+    if (item.tags.length) {
+      const shownTags = item.tags.slice(0, isBlogMode ? 4 : 3)
+      metaParts.push(shownTags.map((t) => `<span>#${escapeHtml(t)}</span>`).join(''))
+    }
+
+    const metaHtml = metaParts.length
+      ? `<div class="search-result-meta">${metaParts.join('<span class="opacity-35">·</span>')}</div>`
+      : ''
+
+    return `
+      <a
+        href="${escapeHtml(item.url)}"
+        class="search-result-item${idx === selectedIdx ? ' is-selected' : ''}"
+        role="option"
+        aria-selected="${idx === selectedIdx ? 'true' : 'false'}"
+        data-result-idx="${idx}"
+        data-cursor="link"
+      >
+        <div class="search-result-main">
+          <div class="search-result-title-row">
+            <span class="search-result-title">${titleHtml}</span>
+            ${kindBadge}
+          </div>
+          <p class="search-result-snippet">${snippetHtml}</p>
+          ${metaHtml}
+        </div>
+        <span class="search-result-arrow" aria-hidden="true">→</span>
+      </a>
+    `
+  }
+
+  function syncModeChrome() {
+    const { modal, input, label, iconSite, iconBlog, siteBar, blogBar, footerMode } = getEls()
+    if (!modal || !input) return
+
+    modal.dataset.mode = currentMode
+    const isBlog = currentMode === 'blog'
+
+    if (label) label.textContent = isBlog ? 'Blog Search' : 'Site'
+    iconSite?.classList.toggle('hidden', isBlog)
+    iconBlog?.classList.toggle('hidden', !isBlog)
+    siteBar?.classList.toggle('hidden', isBlog)
+    blogBar?.classList.toggle('hidden', !isBlog)
+
+    input.placeholder = isBlog
+      ? 'Search blog titles, tags, headings, or article text…'
+      : 'Search site — blogs, projects, creative works, pages…'
+
+    if (footerMode) {
+      footerMode.textContent = isBlog ? 'Blog Search · Articles Only' : 'Site Search · ⌘K'
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('.search-scope-tab').forEach((btn) => {
+      const active = btn.dataset.scope === currentScope
+      btn.classList.toggle('is-active', active)
+      btn.setAttribute('aria-selected', active ? 'true' : 'false')
+    })
+  }
+
+  function renderResults() {
+    const { input, clearBtn, results } = getEls()
+    if (!input || !results) return
+
+    const query = input.value.trim()
+    const rawQuery = query.toLowerCase()
+    const tokens = rawQuery.split(/\s+/).filter(Boolean)
+
+    clearBtn?.classList.toggle('hidden', query.length === 0)
+
+    if (!cachedItems) {
+      results.innerHTML = '<div class="search-status-msg">Loading search index…</div>'
+      return
+    }
+
+    const isBlogMode = currentMode === 'blog'
+    if (isBlogMode) {
+      renderBlogTagBar(cachedItems, query)
+    } else {
+      updateScopeCounts(cachedItems, rawQuery, tokens)
+    }
+
+    const pool = isBlogMode
+      ? cachedItems.filter((item) => item.kind === 'blog')
+      : cachedItems.filter((item) => matchesScope(item, currentScope))
+
+    // Empty query view: tailored per mode!
+    if (tokens.length === 0) {
+      if (isBlogMode) {
+        selectedIdx = Math.min(selectedIdx, Math.max(0, pool.length - 1))
+        if (!pool.length) {
+          results.innerHTML = '<div class="search-status-msg">No blog posts available yet.</div>'
+          return
+        }
+        const cards = pool
+          .map((item, idx) => renderResultCard(item, item.description, [], idx, true))
+          .join('')
+        results.innerHTML = `<div class="search-group-heading">All Blog Articles (${pool.length})</div>${cards}`
+        return
+      }
+
+      if (currentScope === 'all') {
+        const quickPages = cachedItems.filter((i) => i.kind === 'page')
+        const recentBlogs = cachedItems.filter((i) => i.kind === 'blog').slice(0, 3)
+        const featuredProjects = cachedItems.filter((i) => i.kind === 'project').slice(0, 3)
+        const total = quickPages.length + recentBlogs.length + featuredProjects.length
+        selectedIdx = Math.min(selectedIdx, Math.max(0, total - 1))
+
+        let cursor = 0
+        const pagesHtml = quickPages
+          .map((item) => renderResultCard(item, item.description, [], cursor++, false))
+          .join('')
+        const blogsHtml = recentBlogs
+          .map((item) => renderResultCard(item, item.description, [], cursor++, false))
+          .join('')
+        const projectsHtml = featuredProjects
+          .map((item) => renderResultCard(item, item.description, [], cursor++, false))
+          .join('')
+
+        results.innerHTML = `
+          <div class="search-group-heading">Quick Navigation</div>
+          ${pagesHtml}
+          <div class="search-group-heading">Recent Blogs</div>
+          ${blogsHtml}
+          <div class="search-group-heading">Featured Projects</div>
+          ${projectsHtml}
+        `
+        return
+      }
+
+      const subset = pool.slice(0, 12)
+      selectedIdx = Math.min(selectedIdx, Math.max(0, subset.length - 1))
+      const cards = subset
+        .map((item, idx) => renderResultCard(item, item.description, [], idx, false))
+        .join('')
+      results.innerHTML = `<div class="search-group-heading">${KIND_LABELS[currentScope === 'creative' ? 'creative' : currentScope]} (${pool.length})</div>${cards}`
+      return
+    }
+
+    // Scored search results
+    const scored: ScoredResult[] = []
+    for (const item of pool) {
+      const res = scoreItem(item, rawQuery, tokens)
+      if (res) scored.push(res)
+    }
+    scored.sort((a, b) => b.score - a.score)
+
+    if (!scored.length) {
+      const hint = isBlogMode
+        ? 'No blog posts matched your query. Try another keyword or switch to Site Search.'
+        : 'No matching results found across the site.'
+      results.innerHTML = `<div class="search-status-msg">${hint}</div>`
+      selectedIdx = 0
+      return
+    }
+
+    const capped = scored.slice(0, 20)
+    selectedIdx = Math.min(selectedIdx, capped.length - 1)
+    const heading = isBlogMode
+      ? `${capped.length} Matching Blog ${capped.length === 1 ? 'Article' : 'Articles'}`
+      : `${capped.length} ${capped.length === 1 ? 'Result' : 'Results'}`
+
+    const cards = capped
+      .map((entry, idx) => renderResultCard(entry.item, entry.snippet, tokens, idx, isBlogMode))
+      .join('')
+    results.innerHTML = `<div class="search-group-heading">${heading}</div>${cards}`
+  }
+
+  function updateSelectionHighlight(scrollIntoView = true) {
+    const items = Array.from(document.querySelectorAll<HTMLAnchorElement>('.search-result-item'))
+    if (!items.length) return
+    selectedIdx = ((selectedIdx % items.length) + items.length) % items.length
+    items.forEach((el, i) => {
+      const active = i === selectedIdx
+      el.classList.toggle('is-selected', active)
+      el.setAttribute('aria-selected', active ? 'true' : 'false')
+      if (active && scrollIntoView) {
+        el.scrollIntoView({ block: 'nearest' })
+      }
+    })
+  }
+
+  function openSearch(mode: SearchMode = 'site', initialQuery?: string) {
+    const { modal, input } = getEls()
+    if (!modal || !input) return
+
+    prevFocusedEl = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    currentMode = mode
+    currentScope = 'all'
+    selectedIdx = 0
+    isModalOpen = true
+
+    if (typeof initialQuery === 'string') {
+      input.value = initialQuery
+    }
+
+    syncModeChrome()
+    modal.classList.add('is-open')
+    modal.setAttribute('aria-hidden', 'false')
+    document.body.style.overflow = 'hidden'
+
+    // Flush styles so visibility is synchronously `visible` before focusing inside the user gesture
+    void modal.offsetWidth
+    input.focus({ preventScroll: true })
+    if (input.value) input.select()
+
+    renderResults()
+    loadSearchIndex().then(() => {
+      if (isModalOpen) renderResults()
+    })
+
+    requestAnimationFrame(() => {
+      if (!isModalOpen) return
+      if (document.activeElement !== input) {
+        input.focus({ preventScroll: true })
+      }
+      if (input.value) input.select()
+    })
+  }
+
+  function closeSearch() {
+    const { modal, input } = getEls()
+    if (!modal || !isModalOpen) return
+    isModalOpen = false
+    input?.blur()
+    modal.classList.remove('is-open')
+    modal.setAttribute('aria-hidden', 'true')
+    document.body.style.overflow = ''
+    prevFocusedEl?.focus?.()
+    prevFocusedEl = null
+  }
+
+  function bindModalDom() {
+    const { modal, input, clearBtn, results } = getEls()
+    if (!modal || !input || modal.dataset.bound === '1') return
+    modal.dataset.bound = '1'
+
+    modal.querySelectorAll<HTMLElement>('[data-search-close]').forEach((el) => {
+      el.addEventListener('click', closeSearch)
+    })
+
+    input.addEventListener('input', () => {
+      selectedIdx = 0
+      renderResults()
+    })
+
+    clearBtn?.addEventListener('click', () => {
+      input.value = ''
+      selectedIdx = 0
+      renderResults()
+      input.focus()
+    })
+
+    modal.querySelectorAll<HTMLButtonElement>('.search-scope-tab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const nextScope = btn.dataset.scope as SiteScope | undefined
+        if (!nextScope) return
+        currentScope = nextScope
+        selectedIdx = 0
+        syncModeChrome()
+        renderResults()
+        input.focus()
+      })
+    })
+
+    document.getElementById('search-switch-to-site')?.addEventListener('click', () => {
+      currentMode = 'site'
+      currentScope = 'all'
+      selectedIdx = 0
+      syncModeChrome()
+      renderResults()
+      input.focus()
+    })
+
+    document.getElementById('search-blog-tags')?.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-blog-tag]')
+      if (!btn) return
+      const tag = btn.dataset.blogTag ?? ''
+      input.value = input.value.trim().toLowerCase() === tag.toLowerCase() ? '' : tag
+      selectedIdx = 0
+      renderResults()
+      input.focus()
+    })
+
+    results?.addEventListener('mousemove', (e) => {
+      const row = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('.search-result-item')
+      if (!row) return
+      const idx = Number(row.dataset.resultIdx ?? '-1')
+      if (idx >= 0 && idx !== selectedIdx) {
+        selectedIdx = idx
+        updateSelectionHighlight(false)
+      }
+    })
+
+    results?.addEventListener('click', (e) => {
+      const link = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('.search-result-item')
+      if (link) {
+        closeSearch()
+      }
+    })
+  }
+
+  function initGlobalSearchListeners() {
+    window.__norbSearch = {
+      open: openSearch,
+      close: closeSearch,
+      isOpen: () => isModalOpen
+    }
+
+    if (window.__norbSearchBound) return
+    window.__norbSearchBound = true
+
+    // Event delegation for any [data-search-open="site" | "blog"] trigger across pages
+    document.addEventListener('click', (e) => {
+      const trigger = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-search-open]')
+      if (!trigger) return
+      e.preventDefault()
+      const mode: SearchMode = trigger.dataset.searchOpen === 'blog' ? 'blog' : 'site'
+      openSearch(mode)
+    })
+
+    // Global keyboard shortcuts (Cmd/Ctrl+K for Site Search, arrows/enter/esc inside popup)
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault()
+          e.stopPropagation()
+          if (isModalOpen && currentMode === 'site') {
+            closeSearch()
+          } else {
+            openSearch('site')
+          }
+          return
+        }
+
+        if (!isModalOpen) return
+
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          e.stopPropagation()
+          e.stopImmediatePropagation()
+          closeSearch()
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          selectedIdx++
+          updateSelectionHighlight(true)
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          selectedIdx--
+          updateSelectionHighlight(true)
+        } else if (e.key === 'Enter') {
+          const active = document.querySelector<HTMLAnchorElement>('.search-result-item.is-selected')
+          if (active) {
+            e.preventDefault()
+            closeSearch()
+            active.click()
+          }
+        }
+      },
+      true
+    )
+
+    // Fallback for browsers or keyboard extensions that swallow the first Escape keydown to blur the input
+    window.addEventListener(
+      'keyup',
+      (e) => {
+        if (!isModalOpen) return
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          e.stopPropagation()
+          closeSearch()
+        }
+      },
+      true
+    )
+
+    document.addEventListener('astro:before-swap', () => {
+      if (isModalOpen) closeSearch()
+    })
+  }
+
+  function initSearchModal() {
+    initGlobalSearchListeners()
+    bindModalDom()
+  }
+
+  document.addEventListener('astro:page-load', initSearchModal)
+  initSearchModal()
+</script>

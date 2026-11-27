@@ -143,9 +143,11 @@ const initialPost = enrichedPosts[0] ?? null
             <span class='blog-utility-label'>Archives</span>
           </a>
 
-          <a
-            href='/search'
-            aria-label='Search'
+          <button
+            type='button'
+            data-search-open='blog'
+            aria-label='Search blogs'
+            title='Search blogs'
             data-cursor='link'
             class='blog-utility-pill'
           >
@@ -162,8 +164,8 @@ const initialPost = enrichedPosts[0] ?? null
               <circle cx='11' cy='11' r='7' />
               <path d='m20 20-3.5-3.5' />
             </svg>
-            <span class='blog-utility-label'>Search</span>
-          </a>
+            <span class='blog-utility-label'>Search blogs</span>
+          </button>
         </div>
       </div>
 
@@ -436,7 +438,7 @@ const initialPost = enrichedPosts[0] ?? null
   }
   .blog-utility-pill:hover .blog-utility-label,
   .blog-utility-pill:focus-visible .blog-utility-label {
-    max-width: 6rem;
+    max-width: 8.5rem;
     opacity: 1;
     margin-left: 0.45rem;
   }
