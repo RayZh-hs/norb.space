@@ -22,6 +22,7 @@ import { addCopyButton, addLanguage, addTitle, transformerNotationDiff, transfor
 import config from './src/site.config.ts';
 
 const cdnOrigin = (process.env.PUBLIC_CDN_URL || '').trim().replace(/\/$/, '');
+const cdnHostname = cdnOrigin ? new URL(cdnOrigin).hostname : '';
 
 // https://astro.build/config
 export default defineConfig({
@@ -44,6 +45,7 @@ export default defineConfig({
   // ---
 
   image: {
+    ...(cdnHostname ? { domains: [cdnHostname] } : {}),
     service: {
       entrypoint: 'astro/assets/services/sharp'
     }
@@ -72,7 +74,9 @@ export default defineConfig({
   // root: './my-project-directory',
 
   // Prefetch Options
-  prefetch: true,
+  prefetch: {
+    defaultStrategy: 'viewport'
+  },
   // Server Options
   server: {
     host: true

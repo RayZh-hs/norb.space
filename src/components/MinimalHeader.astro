@@ -66,6 +66,7 @@ function isActive(link: string) {
         navItems.map((item) => (
           <a
             href={item.link}
+            data-astro-prefetch='viewport'
             data-cursor='link'
             aria-current={isActive(item.link) ? 'page' : undefined}
             class:list={[
@@ -175,10 +176,13 @@ function isActive(link: string) {
 
   function applyTheme(next: 'light' | 'dark') {
     localStorage.setItem('theme', next)
-    document.documentElement.classList.toggle('dark', next === 'dark')
+    const isDark = next === 'dark'
+    document.documentElement.classList.toggle('dark', isDark)
+    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+    document.documentElement.style.backgroundColor = isDark ? '#0b0b0b' : '#fbfbfb'
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute('content', next === 'dark' ? '#0b0b0b' : '#fafafa')
+      ?.setAttribute('content', isDark ? '#0b0b0b' : '#fbfbfb')
     window.dispatchEvent(new CustomEvent('norb:theme-change', { detail: { theme: next } }))
   }
 

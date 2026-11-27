@@ -2,8 +2,10 @@ import { getCollection, type CollectionEntry } from 'astro:content'
 import { getImage } from 'astro:assets'
 
 const PREVIEW_WIDTH = 24
-const SMALL_WIDTH = 960
-const SMALL_QUALITY = 78
+const SMALL_WIDTH = 720
+const LARGE_WIDTH = 1600
+const SMALL_QUALITY = 76
+const LARGE_QUALITY = 84
 const PREVIEW_QUALITY = 45
 
 export type GalleryImageVariant = {
@@ -55,10 +57,17 @@ async function buildFrame(entry: CollectionEntry<'gallery'>, frameIndex: number)
   const frameData = entry.data.frames[frameIndex]
   const raw = frameData.raw
 
-  const [small, preview] = await Promise.all([
+  const [large, small, preview] = await Promise.all([
     getImage({
       src: raw,
-      width: SMALL_WIDTH,
+      width: Math.min(raw.width, LARGE_WIDTH),
+      fit: 'inside',
+      format: 'webp',
+      quality: LARGE_QUALITY
+    }),
+    getImage({
+      src: raw,
+      width: Math.min(raw.width, SMALL_WIDTH),
       fit: 'inside',
       format: 'webp',
       quality: SMALL_QUALITY
@@ -74,11 +83,14 @@ async function buildFrame(entry: CollectionEntry<'gallery'>, frameIndex: number)
 
   const aspectRatio = raw.width / raw.height
 
+  const largeWidth = large.options.width ?? Math.min(raw.width, LARGE_WIDTH)
+  const largeHeight = large.options.height ?? Math.round(largeWidth / aspectRatio)
+
   const rawVariant: GalleryImageVariant = {
-    src: raw.src,
-    width: raw.width,
-    height: raw.height,
-    format: raw.format
+    src: large.src,
+    width: largeWidth,
+    height: largeHeight,
+    format: (large.options.format ?? 'webp').toString()
   }
 
   const smallWidth = small.options.width ?? SMALL_WIDTH

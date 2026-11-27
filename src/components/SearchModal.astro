@@ -597,8 +597,28 @@
     page: 'Page'
   }
 
+  const SEARCH_STORAGE_KEY = 'norb:search-index:v1'
+  const SEARCH_STORAGE_TTL_MS = 10 * 60 * 1000
+
   async function loadSearchIndex(): Promise<SearchIndexItem[]> {
     if (cachedItems) return cachedItems
+    try {
+      const raw = sessionStorage.getItem(SEARCH_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { ts?: number; items?: SearchIndexItem[] }
+        if (
+          parsed &&
+          typeof parsed.ts === 'number' &&
+          Date.now() - parsed.ts < SEARCH_STORAGE_TTL_MS &&
+          Array.isArray(parsed.items)
+        ) {
+          cachedItems = parsed.items
+          return cachedItems
+        }
+      }
+    } catch {
+      // Ignore storage quota / privacy mode errors
+    }
     if (!fetchPromise) {
       fetchPromise = fetch('/api/search.json')
         .then((res) => {
@@ -607,6 +627,14 @@
         })
         .then((data) => {
           cachedItems = Array.isArray(data.items) ? data.items : []
+          try {
+            sessionStorage.setItem(
+              SEARCH_STORAGE_KEY,
+              JSON.stringify({ ts: Date.now(), items: cachedItems })
+            )
+          } catch {
+            // Ignore storage write errors
+          }
           return cachedItems
         })
         .catch(() => {

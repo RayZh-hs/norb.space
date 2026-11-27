@@ -1,5 +1,5 @@
 ---
-import { Image } from 'astro:assets'
+import { getImage } from 'astro:assets'
 import type { CollectionEntry, InferEntrySchema } from 'astro:content'
 import { PageInfo } from 'astro-pure/components/pages'
 import { FormattedDate, Icon } from 'astro-pure/user'
@@ -31,25 +31,43 @@ const hostUrl = hostProject ? getProjectUrl(hostProject) : null
 const dateTimeOptions: Intl.DateTimeFormatOptions = {
   month: 'short'
 }
+
+// Match the exact 960w/82q WebP generated on /blog so navigating from the index reuses the cached file (0 bytes)
+const optimizedHero = heroImage
+  ? await getImage({
+      src: heroImage.src,
+      width: 960,
+      format: 'webp',
+      quality: 82
+    })
+  : null
+const heroWidth = optimizedHero?.attributes.width ?? heroImage?.width
+const heroHeight = optimizedHero?.attributes.height ?? heroImage?.height
 ---
 
 {
-  heroImage && (
+  heroImage && optimizedHero && (
     <div class='hero-image relative mb-6'>
-      <Image
+      <img
+        src={optimizedHero.src}
+        width={heroWidth}
+        height={heroHeight}
         alt={heroImage.alt || title}
         class='cover-image relative z-10 h-auto w-full max-w-[65ch] rounded-2xl object-contain'
         fetchpriority='high'
         loading='eager'
-        {...heroImage}
+        decoding='async'
       />
-      <Image
-        alt='Blur image'
-        fetchpriority='high'
+      <img
+        src={optimizedHero.src}
+        width={heroWidth}
+        height={heroHeight}
+        alt=''
+        aria-hidden='true'
         loading='eager'
+        decoding='async'
         id='blurImage'
-        class='absolute end-0 top-4 z-0 mt-0 h-full max-w-[65ch] rounded-3xl opacity-55 blur-xl transition-opacity duration-300'
-        {...heroImage}
+        class='pointer-events-none absolute end-0 top-4 z-0 mt-0 h-full max-w-[65ch] rounded-3xl opacity-55 blur-xl transition-opacity duration-300'
       />
     </div>
   )

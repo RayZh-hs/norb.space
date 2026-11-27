@@ -5,6 +5,8 @@ import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
 import PageLayout from '@/layouts/BaseLayout.astro'
 import { getRelatedBlogsForProject, isCreativeProject, normalizeProjectSlug } from '@/lib/content-links'
 
+export const prerender = true
+
 const allProjectsRaw = (await getCollection('projects')).filter((entry) => !isCreativeProject(entry))
 allProjectsRaw.sort((a, b) => {
   const orderA = a.data.order ?? Infinity
@@ -140,7 +142,9 @@ const meta = {
                       src={p.coverSrc}
                       alt={p.name}
                       class='h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]'
-                      loading='eager'
+                      loading={idx === 0 ? 'eager' : 'lazy'}
+                      fetchpriority={idx === 0 ? 'high' : 'auto'}
+                      decoding='async'
                     />
                   </div>
                 ) : (
@@ -158,7 +162,9 @@ const meta = {
                           p.iconDarkSrc && 'dark:hidden'
                         ]}
                         style={`--icon-scale: ${p.iconScale};`}
-                        loading='eager'
+                        loading={idx === 0 ? 'eager' : 'lazy'}
+                        fetchpriority={idx === 0 ? 'high' : 'auto'}
+                        decoding='async'
                       />
                     )}
                     {p.iconDarkSrc && (
@@ -167,7 +173,9 @@ const meta = {
                         alt={p.name}
                         class='project-emblem-img hidden dark:block'
                         style={`--icon-scale: ${p.iconScale};`}
-                        loading='eager'
+                        loading={idx === 0 ? 'eager' : 'lazy'}
+                        fetchpriority={idx === 0 ? 'high' : 'auto'}
+                        decoding='async'
                       />
                     )}
                   </div>

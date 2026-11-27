@@ -34,7 +34,7 @@ const renderContent = async (post: CollectionEntry<'blog'>, site: URL) => {
           const promise = imagesGlob[imagePathPrefix]?.().then(async (res) => {
             const imagePath = res?.default
             if (imagePath) {
-              node.url = `${site}${(await getImage({ src: imagePath })).src.replace('/', '')}`
+              node.url = new URL((await getImage({ src: imagePath })).src, site).href
             }
           })
           if (promise) promises.push(promise)

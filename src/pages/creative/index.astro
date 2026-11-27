@@ -6,6 +6,8 @@ import PageLayout from '@/layouts/BaseLayout.astro'
 import { getRelatedBlogsForProject, isCreativeProject, normalizeProjectSlug } from '@/lib/content-links'
 import { getGalleryItems } from '@/server/galleryService'
 
+export const prerender = true
+
 const creativeRaw = (await getCollection('projects')).filter((entry) => isCreativeProject(entry))
 creativeRaw.sort((a, b) => {
   const orderA = a.data.order ?? Infinity
@@ -34,7 +36,7 @@ const featuredWorks = await Promise.all(
     }))
 
     const coverImg = entry.data.cover
-      ? await getImage({ src: entry.data.cover, width: 1400, format: 'webp', quality: 88 })
+      ? await getImage({ src: entry.data.cover, width: 1200, format: 'webp', quality: 84 })
       : null
     const iconImg = entry.data.icon
       ? await getImage({ src: entry.data.icon.src, width: 420, format: 'webp' })

@@ -1,0 +1,623 @@
+---
+---
+
+<div
+  id='norb-nav-loader'
+  class='norb-nav-loader'
+  transition:persist='norb-nav-loader'
+  role='status'
+  aria-live='polite'
+  aria-label='Loading page'
+  aria-hidden='true'
+>
+  <div class='norb-nav-loader-backdrop' aria-hidden='true'></div>
+  <div class='norb-nav-loader-stage' aria-hidden='true'>
+    <span id='norb-nav-o-slot' class='norb-nav-o-slot'>
+      <span id='norb-nav-o-glyph' class='norb-nav-o-glyph'>o</span>
+    </span>
+  </div>
+</div>
+
+<style is:global>
+  .norb-nav-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s linear 0.24s;
+  }
+
+  .norb-nav-loader.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    view-transition-name: norb-nav-loader;
+    transition:
+      opacity 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s linear 0s;
+  }
+
+  .norb-nav-loader.is-leaving {
+    opacity: 0;
+    visibility: visible;
+    pointer-events: none;
+    view-transition-name: none;
+    transition:
+      opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s linear 0.26s;
+  }
+
+  .norb-nav-loader-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(10, 10, 14, 0.54);
+    backdrop-filter: blur(14px) brightness(0.84);
+    -webkit-backdrop-filter: blur(14px) brightness(0.84);
+  }
+
+  html.dark .norb-nav-loader-backdrop {
+    background-color: rgba(4, 4, 6, 0.66);
+    backdrop-filter: blur(16px) brightness(0.76);
+    -webkit-backdrop-filter: blur(16px) brightness(0.76);
+  }
+
+  .norb-nav-loader-stage {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fafafa;
+    font-family: 'Satoshi', sans-serif;
+    font-size: clamp(5.5rem, 11vw, 8.75rem);
+    font-weight: 600;
+    line-height: 0.94;
+    letter-spacing: -0.055em;
+    user-select: none;
+    filter: drop-shadow(0 10px 34px rgba(0, 0, 0, 0.35));
+    transform: scale(0.94);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  .norb-nav-loader.is-visible .norb-nav-loader-stage {
+    transform: scale(1);
+  }
+
+  .norb-nav-loader.is-leaving .norb-nav-loader-stage {
+    transform: scale(1.03);
+  }
+
+  .norb-nav-o-slot {
+    display: inline-block;
+    position: relative;
+    transform-origin: 54.9% 64.2%;
+    will-change: transform;
+  }
+
+  .norb-nav-o-slot::before {
+    content: 'o';
+    position: absolute;
+    inset: 0;
+    opacity: var(--o-track-opacity, 0.2);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .norb-nav-o-glyph {
+    display: block;
+    position: relative;
+    padding: 0.12em 0.14em;
+    margin: -0.12em -0.14em;
+    will-change: opacity;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .norb-nav-loader,
+    .norb-nav-loader-stage {
+      transition-duration: 0.14s !important;
+      transform: none !important;
+    }
+
+    .norb-nav-loader.is-visible .norb-nav-o-glyph {
+      animation: norbNavReducedPulse 1.4s ease-in-out infinite;
+    }
+  }
+
+  @keyframes norbNavReducedPulse {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+</style>
+
+<script>
+  export interface NorbNavLoaderAPI {
+    show: () => void
+    hide: () => void
+    preview: (durationMs?: number) => void
+    clearCache: () => void
+  }
+
+  declare global {
+    interface Window {
+      __norbNavLoaderInit?: boolean
+      __norbNavLoader?: NorbNavLoaderAPI
+    }
+  }
+
+  ;(function initNavigationLoader() {
+    if (window.__norbNavLoaderInit) return
+    window.__norbNavLoaderInit = true
+
+    const SHOW_DELAY_MS = 110
+    const MIN_VISIBLE_MS = 220
+    const FILL_MS = 780
+    const HOLD_MS = 110
+    const DRAIN_MS = 680
+    const GAP_MS = 70
+    const CYCLE_MS = FILL_MS + HOLD_MS + DRAIN_MS + GAP_MS
+    const LEAVE_FADE_MS = 270
+    const FAILSAFE_MS = 15000
+    const HTML_CACHE_TTL_MS = 5 * 60 * 1000
+    const HTML_CACHE_MAX = 24
+
+    interface CachedPage {
+      html: string
+      ts: number
+    }
+    const htmlCache = new Map<string, CachedPage>()
+    let domParser: DOMParser | null = null
+
+    function getCacheKey(url: URL) {
+      return `${url.pathname}${url.search}`
+    }
+
+    function getCachedPage(url: URL): CachedPage | null {
+      const key = getCacheKey(url)
+      const entry = htmlCache.get(key)
+      if (!entry) return null
+      if (Date.now() - entry.ts > HTML_CACHE_TTL_MS) {
+        htmlCache.delete(key)
+        return null
+      }
+      // Refresh LRU ordering
+      htmlCache.delete(key)
+      htmlCache.set(key, entry)
+      return entry
+    }
+
+    function setCachedPage(url: URL, doc: Document) {
+      if (!doc.documentElement) return
+      const key = getCacheKey(url)
+      htmlCache.delete(key)
+      htmlCache.set(key, {
+        html: `<!DOCTYPE html>${doc.documentElement.outerHTML}`,
+        ts: Date.now()
+      })
+      if (htmlCache.size > HTML_CACHE_MAX) {
+        const oldestKey = htmlCache.keys().next().value
+        if (oldestKey) htmlCache.delete(oldestKey)
+      }
+    }
+
+    let navSeq = 0
+    let showDelayTimer: number | null = null
+    let hideTimer: number | null = null
+    let leaveCleanupTimer: number | null = null
+    let failsafeTimer: number | null = null
+    let rafId = 0
+
+    let isShown = false
+    let shownAt = 0
+    let cycleStartAt = 0
+    let isCompleting = false
+    let completeStartAt = 0
+    let completeFromP = 0
+    let completeDurationMs = 160
+
+    const prefersReduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const easeInOutCubic = (t: number) =>
+      t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
+
+    const getEls = () => ({
+      root: document.getElementById('norb-nav-loader'),
+      slot: document.getElementById('norb-nav-o-slot'),
+      glyph: document.getElementById('norb-nav-o-glyph')
+    })
+
+    function clearTimers() {
+      if (showDelayTimer !== null) {
+        window.clearTimeout(showDelayTimer)
+        showDelayTimer = null
+      }
+      if (hideTimer !== null) {
+        window.clearTimeout(hideTimer)
+        hideTimer = null
+      }
+      if (leaveCleanupTimer !== null) {
+        window.clearTimeout(leaveCleanupTimer)
+        leaveCleanupTimer = null
+      }
+      if (failsafeTimer !== null) {
+        window.clearTimeout(failsafeTimer)
+        failsafeTimer = null
+      }
+    }
+
+    function stopAnim() {
+      if (rafId) {
+        cancelAnimationFrame(rafId)
+        rafId = 0
+      }
+    }
+
+    function setFillMask(glyph: HTMLElement, p: number) {
+      if (p <= 0.001) {
+        glyph.style.opacity = '0'
+        glyph.style.setProperty('-webkit-mask-image', 'none')
+        glyph.style.maskImage = 'none'
+      } else if (p >= 0.999) {
+        glyph.style.opacity = '1'
+        glyph.style.setProperty('-webkit-mask-image', 'none')
+        glyph.style.maskImage = 'none'
+      } else {
+        const deg = p * 360
+        const feather = Math.min(2.0, deg * 0.5, (360 - deg) * 0.5)
+        const mask = `conic-gradient(from 180deg at 53.3% 61.3%, #000 0deg, #000 ${deg.toFixed(2)}deg, transparent ${(deg + feather).toFixed(2)}deg)`
+        glyph.style.opacity = '1'
+        glyph.style.setProperty('-webkit-mask-image', mask)
+        glyph.style.maskImage = mask
+      }
+    }
+
+    function setDrainMask(glyph: HTMLElement, p: number) {
+      if (p <= 0.001) {
+        glyph.style.opacity = '1'
+        glyph.style.setProperty('-webkit-mask-image', 'none')
+        glyph.style.maskImage = 'none'
+      } else if (p >= 0.999) {
+        glyph.style.opacity = '0'
+        glyph.style.setProperty('-webkit-mask-image', 'none')
+        glyph.style.maskImage = 'none'
+      } else {
+        const deg = p * 360
+        const feather = Math.min(2.0, deg * 0.5, (360 - deg) * 0.5)
+        const mask = `conic-gradient(from 180deg at 53.3% 61.3%, transparent 0deg, transparent ${deg.toFixed(2)}deg, #000 ${(deg + feather).toFixed(2)}deg, #000 360deg)`
+        glyph.style.opacity = '1'
+        glyph.style.setProperty('-webkit-mask-image', mask)
+        glyph.style.maskImage = mask
+      }
+    }
+
+    function getCurrentFillProgress(now: number): { inFill: boolean; p: number } {
+      const elapsed = Math.max(0, now - cycleStartAt) % CYCLE_MS
+      if (elapsed < FILL_MS) {
+        return { inFill: true, p: easeInOutCubic(elapsed / FILL_MS) }
+      }
+      if (elapsed < FILL_MS + HOLD_MS) {
+        return { inFill: false, p: 1 }
+      }
+      return { inFill: false, p: 0 }
+    }
+
+    function tick(now: number) {
+      const { glyph, slot } = getEls()
+      if (!glyph || !slot) {
+        rafId = 0
+        return
+      }
+
+      if (isCompleting) {
+        const raw = Math.min(1, (now - completeStartAt) / Math.max(1, completeDurationMs))
+        const p = completeFromP + (1 - completeFromP) * easeOutCubic(raw)
+        setFillMask(glyph, p)
+        slot.style.setProperty('--o-track-opacity', (0.2 * (1 - raw)).toFixed(3))
+        if (raw >= 1) {
+          rafId = 0
+          beginFadeOut()
+          return
+        }
+        rafId = requestAnimationFrame(tick)
+        return
+      }
+
+      const elapsed = Math.max(0, now - cycleStartAt) % CYCLE_MS
+      if (elapsed < FILL_MS) {
+        const p = easeInOutCubic(elapsed / FILL_MS)
+        setFillMask(glyph, p)
+      } else if (elapsed < FILL_MS + HOLD_MS) {
+        setFillMask(glyph, 1)
+      } else if (elapsed < FILL_MS + HOLD_MS + DRAIN_MS) {
+        const p = easeInOutCubic((elapsed - FILL_MS - HOLD_MS) / DRAIN_MS)
+        setDrainMask(glyph, p)
+      } else {
+        setFillMask(glyph, 0)
+      }
+
+      rafId = requestAnimationFrame(tick)
+    }
+
+    function beginFadeOut() {
+      const { root, slot, glyph } = getEls()
+      if (!root) {
+        isShown = false
+        isCompleting = false
+        return
+      }
+      isShown = false
+      isCompleting = false
+      stopAnim()
+
+      root.classList.remove('is-visible')
+      root.classList.add('is-leaving')
+      root.setAttribute('aria-hidden', 'true')
+      document.documentElement.classList.remove('nav-loader-active')
+
+      if (leaveCleanupTimer !== null) window.clearTimeout(leaveCleanupTimer)
+      leaveCleanupTimer = window.setTimeout(() => {
+        leaveCleanupTimer = null
+        root.classList.remove('is-leaving')
+        if (slot) slot.style.setProperty('--o-track-opacity', '0.2')
+        if (glyph) setFillMask(glyph, 0)
+      }, LEAVE_FADE_MS)
+    }
+
+    function showNow() {
+      const { root, slot, glyph } = getEls()
+      if (!root || !slot || !glyph) return
+
+      if (leaveCleanupTimer !== null) {
+        window.clearTimeout(leaveCleanupTimer)
+        leaveCleanupTimer = null
+      }
+      if (hideTimer !== null) {
+        window.clearTimeout(hideTimer)
+        hideTimer = null
+      }
+
+      isCompleting = false
+      root.classList.remove('is-leaving')
+
+      if (!isShown) {
+        isShown = true
+        shownAt = performance.now()
+        cycleStartAt = shownAt
+        slot.style.setProperty('--o-track-opacity', '0.2')
+        if (prefersReduced()) {
+          setFillMask(glyph, 1)
+        } else {
+          setFillMask(glyph, 0)
+          stopAnim()
+          rafId = requestAnimationFrame(tick)
+        }
+      }
+
+      root.classList.add('is-visible')
+      root.setAttribute('aria-hidden', 'false')
+      document.documentElement.classList.add('nav-loader-active')
+
+      if (failsafeTimer !== null) window.clearTimeout(failsafeTimer)
+      failsafeTimer = window.setTimeout(() => {
+        failsafeTimer = null
+        hideLoader()
+      }, FAILSAFE_MS)
+    }
+
+    function hideLoader() {
+      if (showDelayTimer !== null) {
+        window.clearTimeout(showDelayTimer)
+        showDelayTimer = null
+      }
+      if (failsafeTimer !== null) {
+        window.clearTimeout(failsafeTimer)
+        failsafeTimer = null
+      }
+      if (!isShown) return
+
+      const now = performance.now()
+      const elapsedVisible = now - shownAt
+      const remainingMin = Math.max(0, MIN_VISIBLE_MS - elapsedVisible)
+
+      const performDismiss = () => {
+        hideTimer = null
+        if (!isShown) return
+        if (prefersReduced()) {
+          beginFadeOut()
+          return
+        }
+
+        const cur = getCurrentFillProgress(performance.now())
+        if (cur.inFill && cur.p < 0.96) {
+          isCompleting = true
+          completeStartAt = performance.now()
+          completeFromP = cur.p
+          completeDurationMs = Math.max(110, Math.round((1 - cur.p) * 220))
+          if (!rafId) rafId = requestAnimationFrame(tick)
+        } else {
+          beginFadeOut()
+        }
+      }
+
+      if (remainingMin > 0) {
+        if (hideTimer !== null) window.clearTimeout(hideTimer)
+        hideTimer = window.setTimeout(performDismiss, remainingMin)
+      } else {
+        performDismiss()
+      }
+    }
+
+    function startNavigation(delayMs = SHOW_DELAY_MS): number {
+      const seq = ++navSeq
+      if (hideTimer !== null) {
+        window.clearTimeout(hideTimer)
+        hideTimer = null
+      }
+      if (showDelayTimer !== null) {
+        window.clearTimeout(showDelayTimer)
+        showDelayTimer = null
+      }
+
+      if (isShown) {
+        isCompleting = false
+        showNow()
+        return seq
+      }
+
+      showDelayTimer = window.setTimeout(() => {
+        showDelayTimer = null
+        if (seq !== navSeq) return
+        showNow()
+      }, delayMs)
+
+      return seq
+    }
+
+    function finishNavigation(seq?: number) {
+      if (typeof seq === 'number' && seq !== navSeq) return
+      hideLoader()
+    }
+
+    // Expose programmatic API for testing or manual triggers
+    window.__norbNavLoader = {
+      show: () => {
+        navSeq++
+        showNow()
+      },
+      hide: () => {
+        hideLoader()
+      },
+      preview: (durationMs = 2400) => {
+        const seq = ++navSeq
+        showNow()
+        window.setTimeout(() => {
+          finishNavigation(seq)
+        }, durationMs)
+      },
+      clearCache: () => {
+        htmlCache.clear()
+      }
+    }
+
+    // 1. Astro ClientRouter navigation lifecycle + in-memory repeat-navigation HTML cache
+    document.addEventListener('astro:before-preparation', (rawEvent) => {
+      const event = rawEvent as Event & {
+        from?: URL
+        to?: URL
+        formData?: FormData
+        signal?: AbortSignal
+        newDocument?: Document
+        loader?: () => Promise<void>
+      }
+
+      if (
+        event.from &&
+        event.to &&
+        event.from.origin === event.to.origin &&
+        event.from.pathname === event.to.pathname &&
+        event.from.search === event.to.search
+      ) {
+        return
+      }
+
+      const canUseCache =
+        !!event.to &&
+        event.to.origin === window.location.origin &&
+        !event.formData &&
+        event.to.pathname !== '/gallery'
+
+      if (canUseCache && event.to && typeof event.loader === 'function') {
+        const cached = getCachedPage(event.to)
+        if (cached) {
+          event.loader = async () => {
+            domParser ??= new DOMParser()
+            const parsed = domParser.parseFromString(cached.html, 'text/html')
+            parsed.querySelectorAll('noscript').forEach((el) => el.remove())
+            event.newDocument = parsed
+          }
+          return
+        }
+      }
+
+      const seq = startNavigation(SHOW_DELAY_MS)
+
+      if (typeof event.loader === 'function') {
+        const originalLoader = event.loader
+        event.loader = async () => {
+          try {
+            await originalLoader()
+            if (
+              canUseCache &&
+              event.to &&
+              event.newDocument &&
+              !event.defaultPrevented &&
+              !event.signal?.aborted
+            ) {
+              setCachedPage(event.to, event.newDocument)
+            }
+          } catch (err) {
+            finishNavigation(seq)
+            throw err
+          }
+        }
+      }
+    })
+
+    document.addEventListener('astro:before-swap', (rawEvent) => {
+      if (!isShown) return
+      const event = rawEvent as Event & { newDocument?: Document }
+      event.newDocument?.documentElement.classList.add('nav-loader-active')
+    })
+
+    document.addEventListener('astro:page-load', () => {
+      finishNavigation()
+    })
+
+    // 2. Fallback for same-origin links that force a full reload (data-astro-reload)
+    document.addEventListener('click', (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+        return
+      }
+      const link = (e.target as Element | null)?.closest<HTMLAnchorElement>('a[href][data-astro-reload]')
+      if (!link || link.target === '_blank' || link.hasAttribute('download')) return
+      try {
+        const url = new URL(link.href, window.location.href)
+        if (url.origin !== window.location.origin) return
+        if (url.pathname === window.location.pathname && url.search === window.location.search) return
+        startNavigation(SHOW_DELAY_MS)
+      } catch {
+        // Ignore invalid URLs
+      }
+    })
+
+    // 3. Ensure bfcache restores never leave the loader stuck on screen
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) {
+        clearTimers()
+        stopAnim()
+        isShown = false
+        isCompleting = false
+        const { root } = getEls()
+        if (root) {
+          root.classList.remove('is-visible', 'is-leaving')
+          root.setAttribute('aria-hidden', 'true')
+        }
+        document.documentElement.classList.remove('nav-loader-active')
+      }
+    })
+  })()
+</script>

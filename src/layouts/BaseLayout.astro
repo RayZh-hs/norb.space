@@ -5,6 +5,7 @@ import BaseHead from '@/components/BaseHead.astro'
 import MinimalHeader from '@/components/MinimalHeader.astro'
 import MinimalFooter from '@/components/MinimalFooter.astro'
 import InversionCursor from '@/components/InversionCursor.astro'
+import NavigationLoader from '@/components/NavigationLoader.astro'
 import SearchModal from '@/components/SearchModal.astro'
 import config from '@/site-config'
 
@@ -83,6 +84,7 @@ const {
 
     {!hideFooter && <MinimalFooter />}
     <SearchModal />
+    <NavigationLoader />
     <InversionCursor />
 
     <script>

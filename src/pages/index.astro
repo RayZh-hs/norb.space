@@ -2,6 +2,8 @@
 import PageLayout from '@/layouts/BaseLayout.astro'
 import { emailAddress, socials } from '@/pages/contents.config'
 
+export const prerender = true
+
 const meta = {
   title: 'Home',
   description: 'Call me Norb — An aspiring student developer working on LLM Agentic and Computer Vision.'
@@ -153,15 +155,15 @@ const chapterNav = [
           </p>
 
           <div class='hero-actions mt-10 flex flex-wrap items-center gap-7 text-sm'>
-            <a href='/projects' class='hero-portal-link' data-cursor='link'>
+            <a href='/projects' class='hero-portal-link' data-astro-prefetch='viewport' data-cursor='link'>
               <span>Projects</span>
               <span class='portal-arrow' aria-hidden='true'>↗</span>
             </a>
-            <a href='/creative' class='hero-portal-link' data-cursor='link'>
+            <a href='/creative' class='hero-portal-link' data-astro-prefetch='viewport' data-cursor='link'>
               <span>Creative</span>
               <span class='portal-arrow' aria-hidden='true'>↗</span>
             </a>
-            <a href='/blog' class='hero-portal-link' data-cursor='link'>
+            <a href='/blog' class='hero-portal-link' data-astro-prefetch='viewport' data-cursor='link'>
               <span>Blogs</span>
               <span class='portal-arrow' aria-hidden='true'>↗</span>
             </a>
